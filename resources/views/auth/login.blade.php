@@ -1,47 +1,103 @@
-<x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Qxpress Laundry</title>
+  @vite(['resources/css/app.css','resources/js/app.js'])
+</head>
+<body class="font-sans text-gray-800 bg-white">
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+  {{-- TOPBAR --}}
+  <header class="h-14 w-full bg-gray-200">
+    <div class="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
+      <a href="{{ route('landing.home') }}" class="flex items-center gap-3">
+        <div class="h-7 w-7 bg-gray-300 rounded"></div>
+        <span class="text-sm md:text-base font-medium">Qxpress Laundry</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="{{ route('landing.home') }}">Home</a>
+        <a href="{{ Route::has('services') ? route('services') : '#' }}">Daftar Harga</a>
+        <a href="{{ url('/#tentang') }}">Tentang</a>
+        <a href="{{ url('/#pesan') }}">Pesan</a>
+      </nav>
+    </div>
+  </header>
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+  {{-- MAIN --}}
+  <main class="max-w-xl mx-auto px-4 py-10 md:py-14">
+      {{-- Kanan: panel login --}}
+      <div class="rounded bg-gray-100 p-6 md:p-10">
+        <h1 class="text-center text-lg md:text-xl font-semibold">Dashboard Login</h1>
+        <div class="mt-1 h-0.5 bg-gray-300"></div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <form method="POST" action="{{ route('login') }}" class="mt-6 max-w-md mx-auto">
+          @csrf
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
+          {{-- Jika password-only: set email admin dari seeder --}}
+          <input type="hidden" name="email" value="admin@qxpress.test">
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+          {{-- Password --}}
+          <label for="email" class="block text-sm mt-4 mb-1">Email</label>
+          <input id="email" name="email" type="email" required
+                 autocomplete=""
+                 class="w-full border rounded px-3 py-2 bg-white"
+                 placeholder="Email">
+          <label for="password" class="block text-sm mt-4 mb-1">Password</label>
+          <input id="password" name="password" type="password" required
+                 autocomplete="current-password"
+                 class="w-full border rounded px-3 py-2 bg-white"
+                 placeholder="Password">
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800" name="remember">
-                <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Remember me') }}</span>
-            </label>
-        </div>
+          {{-- Error pesan manual (tanpa x-input-error) --}}
+          @error('password')
+            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+          @enderror
+          @error('email')
+            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+          @enderror
 
-        <div class="flex items-center justify-end mt-4">
+          <div class="text-center mt-6">
             @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
+              <a href="{{ route('password.request') }}" class="text-sm text-gray-600 hover:underline">
+                Forgot Password?
+              </a>
             @endif
+          </div>
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
+          <div class="flex justify-center mt-4">
+            <a href="{{ Route::has('password.request') ? route('password.request') : '#' }}"
+               class="px-6 py-2 rounded bg-gray-300 hover:bg-gray-400 transition text-sm inline-block">
+              Reset Password
+            </a>
+          </div>
+
+          <div class="flex justify-end mt-6">
+            <button type="submit" class="px-6 py-3 rounded-lg bg-gray-900 text-white hover:brightness-110">
+              Log in
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  {{-- FOOTER --}}
+  <footer class="bg-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <p class="text-center text-sm">Contact Us!</p>
+      <div class="mt-3 flex items-center justify-center gap-8 text-sm">
+        <div class="flex items-center gap-2">
+          <span class="inline-block h-5 w-5 bg-gray-400 rounded-full"></span>
+          <span>@qxpress.laundry</span>
         </div>
-    </form>
-</x-guest-layout>
+        <div class="flex items-center gap-2">
+          <span class="inline-block h-5 w-5 bg-gray-400 rounded-full"></span>
+          <span>0813-7382-0217</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
