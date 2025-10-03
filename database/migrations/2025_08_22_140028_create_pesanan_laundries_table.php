@@ -13,6 +13,8 @@ return new class extends Migration {
         $t->string('no_hp_pel', 20);
         $t->foreignId('admin_id')->constrained('users')->cascadeOnDelete(); // pengelola
         $t->timestamps();
+        $t->integer('qty')->default(1);
+        $t->string('pembayaran')->default('belum_lunas');
       });
     }
     public function down(){ Schema::dropIfExists('pesanan_laundry'); }

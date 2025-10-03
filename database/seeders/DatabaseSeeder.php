@@ -12,6 +12,5 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,   // user admin + staff
             LookupSeeder::class,      // metode pembayaran, services, informasi, saldo_kas, fee
         ]);
-        $this->call(\Database\Seeders\PesananLaundrySeeder::class);
     }
 }

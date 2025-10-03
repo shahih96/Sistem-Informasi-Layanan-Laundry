@@ -14,6 +14,7 @@ return new class extends Migration {
         $t->foreignId('saldo_kas_id')->nullable()->constrained('saldo_kas')->nullOnDelete();
         $t->foreignId('fee_id')->nullable()->constrained('fee')->nullOnDelete();
         // kolom opsional untuk laporan ringkas
+        $t->string('keterangan')->nullable();
         $t->unsignedInteger('qty')->default(1);
         $t->integer('subtotal')->default(0);
         $t->integer('total')->default(0);

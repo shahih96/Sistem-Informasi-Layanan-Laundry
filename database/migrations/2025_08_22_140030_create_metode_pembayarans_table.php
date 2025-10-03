@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(){
       Schema::create('metode_pembayaran', function (Blueprint $t){
         $t->id();
-        $t->enum('nama', ['tunai','qris']);
+        $t->enum('nama', ['tunai','qris','bon']);
         $t->timestamps();
       });
     }

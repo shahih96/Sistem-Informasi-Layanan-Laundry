@@ -3,7 +3,8 @@
 @section('title','Dashboard Qxpress Laundry')
 
 @section('content')
-<div class="grid md:grid-cols-4 gap-4">
+{{-- Kartu ringkasan: responsif 1 / 2 / 4 kolom --}}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
   <div class="bg-white p-5 rounded-xl shadow">
     <div class="text-sm opacity-70">Total Pesanan Hari ini</div>
     <div class="mt-2 text-3xl font-bold">{{ $totalPesananHariIni }}</div>
@@ -22,6 +23,7 @@
   </div>
 </div>
 
+{{-- Riwayat tabel: auto-scroll horizontal di mobile --}}
 <div class="mt-8 bg-white p-5 rounded-xl shadow">
   <div class="font-semibold mb-3">Riwayat Pesanan Terbaru</div>
   <div class="overflow-x-auto">
@@ -48,15 +50,17 @@
   </div>
 </div>
 
-{{-- Ringkasan Keuangan --}}
-<div class="mt-8 grid md:grid-cols-3 gap-4">
+{{-- Ringkasan keuangan: 1 kolom di mobile, panel kedua melebar di desktop --}}
+<div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
   <div class="bg-white p-5 rounded-xl shadow">
     <div class="text-sm opacity-70">Total Cash Laundry</div>
     <div class="mt-2 text-3xl font-bold">Rp {{ number_format($saldoKas,0,',','.') }}</div>
   </div>
-  <div class="bg-white p-5 rounded-xl shadow col-span-2">
+  <div class="bg-white p-5 rounded-xl shadow lg:col-span-2">
     <div class="font-semibold mb-2">Omzet Bulan Ini (ringkas)</div>
-    <div class="text-sm text-gray-500">Total hari: {{ $omzetPerHari->count() }}, total: Rp {{ number_format($omzetPerHari->sum('omzet'),0,',','.') }}</div>
+    <div class="text-sm text-gray-500">
+      Total hari: {{ $omzetPerHari->count() }}, total: Rp {{ number_format($omzetPerHari->sum('omzet'),0,',','.') }}
+    </div>
   </div>
 </div>
 @endsection
