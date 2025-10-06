@@ -14,12 +14,20 @@ use App\Models\SaldoKartu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+
+use Carbon\Carbon;
 use Throwable;
 
 class RekapController extends Controller
 {
-    public function index()
+    public function index(request $r)
     {
+        // === TANGGAL TERPILIH ===
+        $day   = $r->query('d') ? Carbon::parse($r->query('d')) : today();
+        $start = $day->copy()->startOfDay();
+        $end   = $day->copy()->endOfDay();
+        $isToday = $day->isToday();
+
         // id metode
         $idTunai = MetodePembayaran::where('nama', 'tunai')->value('id');
         $idQris  = MetodePembayaran::where('nama', 'qris')->value('id');
@@ -28,6 +36,7 @@ class RekapController extends Controller
         // === OMSET (rekap dengan service_id) ===
         $omset = Rekap::query()
             ->whereNotNull('service_id')
+            ->whereBetween('created_at', [$start, $end])
             ->select([
                 'service_id',
                 'metode_pembayaran_id',
@@ -44,90 +53,202 @@ class RekapController extends Controller
         // === PENGELUARAN (rekap tanpa service_id) ===
         $pengeluaran = Rekap::with('metode')
             ->whereNull('service_id')
+            ->whereBetween('created_at', [$start, $end])
             ->latest()
             ->paginate(10, ['*'], 'pengeluaran');
 
-        // === Ringkasan angka untuk kartu di atas ===
-        // Cash = tunai + qris
-        $totalCash = Rekap::whereNotNull('service_id')
-            ->whereIn('metode_pembayaran_id', array_filter([$idTunai, $idQris]))
-            ->sum('total');
-
-        // Piutang = bon
-        $totalPiutang = Rekap::whereNotNull('service_id')
-            ->where('metode_pembayaran_id', $idBon)
-            ->sum('total');
-
-        // ---------------- HITUNG FEE DARI OMZET ----------------
-        $rekapOmzet = Rekap::with('service')
+        // TOTAL FEE
+            $rekapHariIni = Rekap::with('service')
             ->whereNotNull('service_id')
-            ->whereDate('created_at', today())
+            ->whereNull('pesanan_laundry_id')
+            ->whereBetween('created_at', [$start, $end])
             ->get();
 
-        $feeLipat = 0;
-        $feeSetrika = 0;
+            $feeLipat = 0;
+            $feeSetrika = 0;
+            $lipatKgHariIni = 0;
+            $setrikaKgTotal  = 0;
 
-        // kumpulkan total kg untuk semua layanan "lipat"
-        $lipatKgTotal = 0;
+            // kumpulkan total kg untuk semua layanan "lipat"
+            $lipatKgTotal = 0;
 
-        foreach ($rekapOmzet as $row) {
+            foreach ($rekapHariIni as $row) {
+                $qty  = (int) ($row->qty ?? 0);
+                if ($qty <= 0) continue;
+            
+                $name = strtolower($row->service->nama_service ?? '');
+            
+                // --- LIPAT ---
+                if (str_contains($name, 'lipat') && str_contains($name, '/kg')) {
+                    $lipatKgHariIni += $qty;
+                    continue;
+                }
+                if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) {
+                    $lipatKgHariIni += 7 * $qty;
+                    continue;
+                }
+                // Bed cover diasumsikan 7 Kg per item
+                if (str_contains($name, 'bed cover')) {
+                    $lipatKgHariIni += 7 * $qty;
+                    continue;
+                }
+            
+                // --- SETRIKA ---
+                if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrika += 3000 * $qty; continue; }
+                if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrika += 5000 * $qty; continue; }
+                if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrika += 7000 * $qty; continue; }
+            
+                // Semua layanan yang ada kata "setrika" dihitung per kg = Rp 1.000
+                if (str_contains($name, 'setrika')) {
+                    $setrikaKgTotal += $qty;
+                    $feeSetrika += $qty * 1000;
+                }
+            }
+            
+            // ---- Carry-over lipat berbasis histori (TANPA menyentuh tabel Fee) ----
+            // total KG lipat sampai akhir H (untuk sisa setelah H)
+            $lipatToEnd = $this->sumKgLipatUntil($end);
+            // total KG lipat sampai akhir H-1 (untuk hitung terbayar hari ini)
+            $lipatToPrevEnd = $this->sumKgLipatUntil($start->copy()->subSecond()); // sebelum start
+
+            $sisaLipatBaru     = $lipatToEnd % 7;
+            $kgLipatTerbayar   = (intdiv($lipatToEnd, 7) - intdiv($lipatToPrevEnd, 7)) * 7;
+            $feeLipat          = (intdiv($lipatToEnd, 7) - intdiv($lipatToPrevEnd, 7)) * 3000;
+
+            $totalFee = $feeLipat + $feeSetrika;
+
+        
+        // ==================== Ringkasan angka untuk kartu di atas ======================================
+        // === RINGKASAN CASH (AKUMULASI s.d. $end) ===
+        // Masuk tunai kumulatif
+        $cashMasukTunaiCum = Rekap::whereNotNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->where('created_at', '<=', $end)
+            ->sum('total');
+
+        // Keluar tunai kumulatif
+        $cashKeluarTunaiCum = Rekap::whereNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->where('created_at', '<=', $end)
+            ->sum('total');
+
+        // Pesanan tunai yang belum pernah dicatat ke rekap (fallback), kumulatif
+        $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
+            ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
+            ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
+            ->whereNull('rekap.id')
+            ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
+            ->where('pesanan_laundry.created_at', '<=', $end)
+            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+
+        // === FEE KUMULATIF s.d. $end (untuk mengurangi saldo kas akumulasi) ===
+        $rowsToEnd = Rekap::with('service')
+            ->whereNotNull('service_id')
+            ->where('created_at', '<=', $end)
+            ->get();
+
+        $kgLipatTotalCum = 0;
+        $feeSetrikaCum   = 0;
+
+        foreach ($rowsToEnd as $row) {
             $qty  = (int) ($row->qty ?? 0);
             if ($qty <= 0) continue;
 
             $name = strtolower($row->service->nama_service ?? '');
 
-            // --- LIPAT ---
-            // Regular (/Kg): tambahkan apa adanya
-            if (str_contains($name, 'lipat') && str_contains($name, '/kg')) {
-                $lipatKgTotal += $qty;
-            }
+            if (str_contains($name, 'lipat') && str_contains($name, '/kg')) { $kgLipatTotalCum += $qty; continue; }
+            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) { $kgLipatTotalCum += 7 * $qty; continue; }
+            if (str_contains($name, 'bed cover')) { $kgLipatTotalCum += 7 * $qty; continue; }
 
-            // Express max 7Kg: konversi ke kilogram lalu akumulasi
-            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) {
-                $lipatKgTotal += 7 * $qty;
-            }
-
-            // --- SETRIKA ---
-            // Khusus: Setrika Express 3/5/7 Kg (tarif flat per kuantitas)
-            if (str_contains($name, 'cuci setrika express 3kg')) {
-                $feeSetrika += 3000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
-                $feeSetrika += 5000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
-                $feeSetrika += 7000 * $qty;
-                continue;
-            }
-
-            // Semua layanan ber-kata kunci "setrika" (per kg = 1.000)
-            if (str_contains($name, 'setrika')) {
-                $feeSetrika += $qty * 1000;
-            }
+            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrikaCum += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrikaCum += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrikaCum += 7000 * $qty; continue; }
+            if (str_contains($name, 'setrika')) { $feeSetrikaCum += $qty * 1000; }
         }
 
-        // Setelah loop, hitung fee lipat berdasarkan total kg terkumpul
-        $feeLipat = intdiv($lipatKgTotal, 7) * 3000;
+        $feeLipatCum = intdiv($kgLipatTotalCum, 7) * 3000;
+        $totalFeeCum = $feeLipatCum + $feeSetrikaCum;
 
-        $totalFee = $feeLipat + $feeSetrika;
+        // === SALDO KAS (AKUMULASI as-of $end) ===
+        $totalCash = $cashMasukTunaiCum + $extraCashFromBonLunasTunaiCum - $cashKeluarTunaiCum - $totalFeeCum;
+
+        // Piutang = bon
+        $totalPiutang = PesananLaundry::with('service')
+        ->where('metode_pembayaran_id', $idBon)
+        ->get()
+        ->sum(function($p){
+            $qty   = max(1, (int)($p->qty ?? 1));
+            $harga = (int)($p->service->harga_service ?? 0);
+            return $qty * $harga;
+        });
 
         // -------------------------------------------------------
 
-        // List pesanan (opsional)
+        // List pesanan
         $lunas = PesananLaundry::with('service', 'metode')
             ->whereIn('metode_pembayaran_id', array_filter([$idTunai, $idQris]))
+            ->whereBetween('created_at', [$start, $end])
             ->latest()->paginate(10, ['*'], 'lunas');
 
-        $bon  = PesananLaundry::with('service', 'metode')
-            ->where('metode_pembayaran_id', $idBon)
-            ->latest()->paginate(10, ['*'], 'bon');
+        $bon = PesananLaundry::with(['service','metode'])
+        ->where('created_at', '<=', $end)
+        ->where(function ($q) use ($idBon, $idTunai, $idQris, $start, $end) {
 
-        // Ambil saldo_kartu dari kolom saldo_baru (prioritas hari ini, fallback terakhir)
-        $saldoRow = SaldoKartu::whereDate('created_at', today())->latest('id')->first()
-            ?? SaldoKartu::latest('id')->first();
-        $saldoKartu = (int) ($saldoRow->saldo_baru ?? 0);
+            // 1) AS-OF $end MASIH BON
+            //    - sekarang masih bon, atau
+            //    - sekarang sudah lunas, tapi pelunasannya terjadi SETELAH $end
+            $q->where(function ($qq) use ($idBon, $end) {
+                $qq->where('metode_pembayaran_id', $idBon)                   // masih bon saat ini
+                ->orWhere(function ($qqq) use ($idBon, $end) {            // sudah lunas sekarang,
+                    $qqq->where('metode_pembayaran_id', '<>', $idBon)     // tapi HARI PELUNASAN > $end
+                        ->where('updated_at', '>', $end);
+                });
+            })
+
+            // 2) DIBAYAR PADA TANGGAL YANG DILIAT ($start..$end)
+            //    Tampilkan juga baris ini (sebagai "muncul terakhir" di hari pelunasan)
+            ->orWhere(function ($qq) use ($idTunai, $idQris, $start, $end) {
+                $qq->whereBetween('updated_at', [$start, $end])
+                ->whereIn('metode_pembayaran_id', [$idTunai, $idQris]);
+            });
+        })
+        ->latest('created_at')
+        ->paginate(10, ['*'], 'bon'); 
+
+        // === KARTU TAP (berdasarkan tanggal terpilih) ===
+        $dayStr  = $day->toDateString();                // tanggal yang dipilih di filter
+        $prevStr = $day->copy()->subDay()->toDateString();
+
+        // Ambil row saldo_kartu utk H (day) & H-1 (prev day), TANPA fallback ke latest()
+        $saldoRowDay  = SaldoKartu::whereDate('created_at', $dayStr)->latest('id')->first();
+        $saldoRowPrev = SaldoKartu::whereDate('created_at', $prevStr)->latest('id')->first();
+
+        // Sisa Saldo Kartu utk tanggal terpilih
+        // Kalau ingin "tidak muncul" saat tidak ada data, pakai null (biar bisa di-hide di Blade)
+        $saldoKartu = $saldoRowDay ? (int) $saldoRowDay->saldo_baru : null;
+
+        // Total tap kartu tanggal terpilih = (saldo H-1 – saldo H) / 10000
+        $saldoToday = (int) ($saldoRowDay?->saldo_baru  ?? 0);
+        $saldoYday  = (int) ($saldoRowPrev?->saldo_baru ?? 0);
+        $selisih    = max(0, $saldoYday - $saldoToday);
+        $totalTapHariIni = ($saldoRowDay && $saldoRowPrev) ? intdiv($selisih, 10000) : 0;
+
+        // Tap gagal tanggal terpilih
+        $tapGagalHariIni = (int) ($saldoRowDay?->tap_gagal ?? 0);
+
+        // 1) Total Omzet Hari Ini (sudah benar)
+        $today = now()->toDateString();
+        $yday  = now()->subDay()->toDateString();
+        $totalOmzetHariIni = Rekap::whereNotNull('service_id')
+            ->whereDate('created_at', $today)
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('total');
+
+        // KEEP QUERY PARAM 'd' di pagination
+        $omset->appends(['d' => $day->toDateString()]);
+        $pengeluaran->appends(['d' => $day->toDateString()]);
+        $lunas->appends(['d' => $day->toDateString()]);
+        $bon->appends(['d' => $day->toDateString()]);
 
         return view('admin.rekap.index', compact(
             'omset',
@@ -136,10 +257,17 @@ class RekapController extends Controller
             'totalPiutang',
             'totalFee',
             'feeLipat',
-            'feeSetrika', // dikirim juga kalau mau ditampilkan rinci
+            'feeSetrika',
+            'sisaLipatBaru',
+            'kgLipatTerbayar',
+            'setrikaKgTotal',
             'lunas',
             'bon',
             'saldoKartu',
+            'totalOmzetHariIni',
+            'totalTapHariIni',
+            'tapGagalHariIni',
+            'day','isToday',
         ));
     }
 
@@ -222,7 +350,6 @@ class RekapController extends Controller
         }
     }
 
-
     public function destroy(Rekap $rekap)
     {
         $rekap->delete();
@@ -271,5 +398,56 @@ class RekapController extends Controller
         });
 
         return back()->with('ok', 'Pengeluaran berhasil disimpan.');
+    }
+
+    public function updateBonMetode(Request $r, PesananLaundry $pesanan)
+    {
+        $r->validate([
+            'metode' => ['required', 'in:bon,tunai,qris'],
+        ]);
+    
+        // map nama -> id
+        $map = MetodePembayaran::pluck('id', 'nama');
+        $newId = $map[$r->metode] ?? null;
+    
+        if (!$newId) {
+            return back()->withErrors(['metode' => 'Metode tidak valid.']);
+        }
+    
+        // ✅ Cukup update metode pembayaran di pesanan
+        $pesanan->update(['metode_pembayaran_id' => $newId]);
+    
+        // ❌ Jangan ubah tabel rekap sama sekali di sini
+        return back()->with('ok', 'Metode pembayaran bon diperbarui.');
+    }
+
+    private function sumKgLipatUntil($until): int
+    {
+        $rows = Rekap::with('service')
+            ->whereNotNull('service_id')
+            ->where('created_at', '<=', $until)
+            ->get();
+
+        $total = 0;
+        foreach ($rows as $row) {
+            $qty  = (int) ($row->qty ?? 0);
+            if ($qty <= 0) continue;
+
+            $name = strtolower($row->service->nama_service ?? '');
+
+            if (str_contains($name, 'lipat') && str_contains($name, '/kg')) {
+                $total += $qty;
+                continue;
+            }
+            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) {
+                $total += 7 * $qty;
+                continue;
+            }
+            if (str_contains($name, 'bed cover')) {
+                $total += 7 * $qty;
+                continue;
+            }
+        }
+        return $total;
     }
 }

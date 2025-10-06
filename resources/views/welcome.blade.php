@@ -89,7 +89,6 @@
 
   <!-- MAIN CONTENT-->
   <main class="pt-16">
-
     <!-- HERO -->
     <section class="relative">
       <div
@@ -114,10 +113,10 @@
         <!-- Overlay teks -->
         <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-4
                     bg-gradient-to-t from-black/70 via-black/40 to-transparent">
-          <h1 class="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">
+          <h1 class="text-3xl md:text-5xl font-extrabold text-white drop-shadow-[2px_2px_2px_#000000]">
             Welcome to Qxpress Laundry
           </h1>
-          <p class="text-lg md:text-2xl text-gray-100 mt-3 drop-shadow">
+          <p class="text-lg md:text-2xl text-gray-100 mt-3 drop-shadow-[2px_2px_2px_#000000]">
             Solusi Laundry Terpercaya Anda
           </p>
           <div class="mt-6 flex items-center justify-center gap-4">
@@ -215,13 +214,13 @@
     </section>
 
     <!-- TENTANG KAMI -->
-    <section id="tentang" class="scroll-mt-16 md:scroll-mt-20 max-w-5xl mx-auto px-4 py-16">
+    <section id="tentang" class="scroll-mt-16 md:scroll-mt-20 max-w-7xl mx-auto px-4 py-16 bg-[#CDE6EE] rounded-2xl shadow-sm">
       <h2 class="text-2xl md:text-3xl font-bold text-center mb-10">Tentang Kami</h2>
 
       <div class="grid md:grid-cols-2 gap-10 items-center">
         <!-- Kolom kiri (logo/gambar) -->
         <div class="flex justify-center">
-          <div class="w-80 h-80 rounded-xl flex items-center justify-center overflow-hidden">
+          <div class="w-80 h-80 rounded-xl flex items-right justify overflow-hidden">
             <img src="{{ asset('images/logo.png') }}"
               alt="Logo Qxpress Laundry"
               class="max-w-full max-h-full object-contain"
