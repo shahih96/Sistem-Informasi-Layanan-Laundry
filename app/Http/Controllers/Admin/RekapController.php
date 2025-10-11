@@ -94,18 +94,31 @@ class RekapController extends Controller
                 }
             
                 // --- SETRIKA ---
-                if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrika += 3000 * $qty; continue; }
-                if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrika += 5000 * $qty; continue; }
-                if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrika += 7000 * $qty; continue; }
-            
-                // Semua layanan yang ada kata "setrika" dihitung per kg = Rp 1.000
+                if (str_contains($name, 'cuci setrika express 3kg')) {
+                    $setrikaKgTotal += 3 * $qty;      // ⬅️ tambahkan kg
+                    $feeSetrika     += 3000 * $qty;
+                    continue;
+                }
+                if (str_contains($name, 'cuci setrika express 5kg')) {
+                    $setrikaKgTotal += 5 * $qty;      // ⬅️ tambahkan kg
+                    $feeSetrika     += 5000 * $qty;
+                    continue;
+                }
+                if (str_contains($name, 'cuci setrika express 7kg')) {
+                    $setrikaKgTotal += 7 * $qty;      // ⬅️ tambahkan kg
+                    $feeSetrika     += 7000 * $qty;
+                    continue;
+                }
+
+                // semua layanan yang ada kata "setrika" dihitung per kg = Rp 1.000
                 if (str_contains($name, 'setrika')) {
                     $setrikaKgTotal += $qty;
-                    $feeSetrika += $qty * 1000;
+                    $feeSetrika     += $qty * 1000;
                 }
+
             }
             
-            // ---- Carry-over lipat berbasis histori (TANPA menyentuh tabel Fee) ----
+            // ---- Carry-over lipat----
             // total KG lipat sampai akhir H (untuk sisa setelah H)
             $lipatToEnd = $this->sumKgLipatUntil($end);
             // total KG lipat sampai akhir H-1 (untuk hitung terbayar hari ini)
@@ -215,34 +228,52 @@ class RekapController extends Controller
         ->latest('created_at')
         ->paginate(10, ['*'], 'bon'); 
 
-        // === KARTU TAP (berdasarkan tanggal terpilih) ===
-        $dayStr  = $day->toDateString();                // tanggal yang dipilih di filter
-        $prevStr = $day->copy()->subDay()->toDateString();
+        // === KARTU TAP (menggunakan catatan terakhir sebelum hari terpilih) ===
+        $CAP     = 5_000_000;  // saldo maksimum setelah isi ulang
+        $PER_TAP = 10_000;     // pengurangan per 1 tap
 
-        // Ambil row saldo_kartu utk H (day) & H-1 (prev day), TANPA fallback ke latest()
-        $saldoRowDay  = SaldoKartu::whereDate('created_at', $dayStr)->latest('id')->first();
-        $saldoRowPrev = SaldoKartu::whereDate('created_at', $prevStr)->latest('id')->first();
+        // Ambil row saldo_kartu untuk H (antara $start..$end)
+        $saldoRowDay = SaldoKartu::whereBetween('created_at', [$start, $end])
+            ->latest('id')
+            ->first();
 
-        // Sisa Saldo Kartu utk tanggal terpilih
-        // Kalau ingin "tidak muncul" saat tidak ada data, pakai null (biar bisa di-hide di Blade)
+        // Ambil catatan saldo terakhir SEBELUM hari terpilih (bisa H-1, H-2, dst)
+        $saldoRowPrev = SaldoKartu::where('created_at', '<', $start)
+            ->latest('id')
+            ->first();
+
+        // Sisa Saldo Kartu utk tanggal terpilih (null kalau memang belum diinput)
         $saldoKartu = $saldoRowDay ? (int) $saldoRowDay->saldo_baru : null;
 
-        // Total tap kartu tanggal terpilih = (saldo H-1 – saldo H) / 10000
-        $saldoToday = (int) ($saldoRowDay?->saldo_baru  ?? 0);
-        $saldoYday  = (int) ($saldoRowPrev?->saldo_baru ?? 0);
-        $selisih    = max(0, $saldoYday - $saldoToday);
-        $totalTapHariIni = ($saldoRowDay && $saldoRowPrev) ? intdiv($selisih, 10000) : 0;
-
-        // Tap gagal tanggal terpilih
+        // Tap gagal: ambil yang diinput karyawan pada hari terpilih saja
         $tapGagalHariIni = (int) ($saldoRowDay?->tap_gagal ?? 0);
 
-        // 1) Total Omzet Hari Ini (sudah benar)
-        $today = now()->toDateString();
-        $yday  = now()->subDay()->toDateString();
-        $totalOmzetHariIni = Rekap::whereNotNull('service_id')
-            ->whereDate('created_at', $today)
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('total');
+        // Hitung total tap berdasarkan selisih saldo dengan logika wrap ke CAP
+        $totalTapHariIni = 0;
+        if ($saldoRowDay && $saldoRowPrev) {
+            $saldoToday = max(0, min($CAP, (int)$saldoRowDay->saldo_baru));
+            $saldoPrev  = max(0, min($CAP, (int)$saldoRowPrev->saldo_baru));
+
+            if ($saldoToday <= $saldoPrev) {
+                // Tidak ada isi ulang ke CAP di antaranya
+                $totalTapHariIni = intdiv($saldoPrev - $saldoToday, $PER_TAP);
+            } else {
+                // Ada isi ulang ke CAP di antaranya (wrap)
+                // contoh: prev 250.000 → habis (25 tap), isi ke 5.000.000, lalu turun ke 4.900.000 (10 tap) => 35
+                $totalTapHariIni = intdiv($saldoPrev, $PER_TAP) + intdiv($CAP - $saldoToday, $PER_TAP);
+            }
+        } else {
+            // kalau salah satu tidak ada (belum input hari ini, atau belum ada histori sama sekali) biarkan 0
+            $totalTapHariIni = 0;
+        }
+
+        // Total Omzet bersih dan kotor Hari Ini
+        $totalOmzetKotorHariIni = Rekap::whereNotNull('service_id')
+        ->whereBetween('created_at', [$start, $end])
+        ->sum('total');
+        // sudah dikurang dengan fee
+        $totalOmzetBersihHariIni = max(0, $totalOmzetKotorHariIni - $totalFee);
+
 
         // KEEP QUERY PARAM 'd' di pagination
         $omset->appends(['d' => $day->toDateString()]);
@@ -264,7 +295,8 @@ class RekapController extends Controller
             'lunas',
             'bon',
             'saldoKartu',
-            'totalOmzetHariIni',
+            'totalOmzetBersihHariIni',
+            'totalOmzetKotorHariIni',
             'totalTapHariIni',
             'tapGagalHariIni',
             'day','isToday',
@@ -308,9 +340,8 @@ class RekapController extends Controller
 
     public function storeSaldo(Request $request)
     {
-        // Validasi akan throw ValidationException sendiri (tidak perlu try-catch)
         $data = $request->validate([
-            'saldo_kartu' => ['required', 'numeric', 'min:0'],
+            'saldo_kartu' => ['required', 'integer', 'min:0', 'max:5000000'],
             'tap_gagal'   => ['required', 'integer', 'min:0'],
         ]);
 

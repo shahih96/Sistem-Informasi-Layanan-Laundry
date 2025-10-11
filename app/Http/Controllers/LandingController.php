@@ -114,7 +114,7 @@ class LandingController extends Controller
             $intl = '+62'.ltrim($local, '0');
     
             $items = PesananLaundry::query()
-                ->with(['service', 'latestStatusLog.status'])
+                ->with(['service', 'metode', 'latestStatusLog.status'])
                 ->where(function ($w) use ($local, $intl) {
                     $w->where('no_hp_pel', 'like', "%{$local}%")
                       ->orWhere('no_hp_pel', 'like', "%{$intl}%");

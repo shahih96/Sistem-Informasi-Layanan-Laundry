@@ -1,13 +1,20 @@
 @extends('admin.layout')
 @section('title','Input rekap keuangan – Qxpress Laundry')
 
+@php
+  // Metode default selain "bon"
+  $defaultNonBon = optional(
+    $metodes->first(fn($m) => strtolower($m->nama) !== 'bon')
+  )->id ?? optional($metodes->first())->id;
+@endphp
+
 @section('content')
   <div class="flex items-center justify-between">
     <div class="text-xl md:text-2xl font-bold">Input rekap keuangan – Qxpress Laundry</div>
     <a href="{{ route('admin.rekap.index') }}" class="text-sm underline">Kembali</a>
   </div>
 
-  {{-- Form Input Omset --}}
+  {{-- ======================= FORM OMSET ======================= --}}
   <section x-data="omsetForm()" class="mt-6 bg-white rounded-2xl shadow p-5">
     <div class="text-lg font-bold mb-4">Tabel Omset</div>
 
@@ -18,9 +25,9 @@
             <th class="px-3 py-2 text-left">No</th>
             <th class="px-3 py-2 text-left">Nama Layanan</th>
             <th class="px-3 py-2 text-center">Kuantitas</th>
-            <th class="px-3 py-2 text-right">Harga</th>    {{-- auto dari services --}}
+            <th class="px-3 py-2 text-right">Harga</th>
             <th class="px-3 py-2 text-center">Metode</th>
-            <th class="px-3 py-2 text-right">Total</th>    {{-- qty x harga --}}
+            <th class="px-3 py-2 text-right">Total</th>
             <th class="px-3 py-2"></th>
           </tr>
         </thead>
@@ -42,19 +49,25 @@
 
               <td class="px-3 py-2">
                 <div class="flex items-center justify-center gap-2">
-                  <button type="button" class="h-7 w-7 rounded border"
-                          @click="r.qty = Math.max(1, r.qty-1)">–</button>
-                  <input type="number" min="1" class="w-16 text-center border rounded px-2 py-1"
-                        :name="`rows[${idx}][qty]`" x-model.number="r.qty">
-                  <button type="button" class="h-7 w-7 rounded border"
-                          @click="r.qty++">+</button>
+                  <button type="button" class="h-7 w-7 rounded border" @click="dec(idx)">–</button>
+
+                  <!-- input tanpa spinner, tetap kirim rows[idx][qty] -->
+                  <input type="text" inputmode="numeric" pattern="\d*"
+                        class="w-16 text-center border rounded px-2 py-1"
+                        :name="`rows[${idx}][qty]`"
+                        x-model="r.qty_display"
+                        @input="syncQty(idx)">
+
+                  <button type="button" class="h-7 w-7 rounded border" @click="inc(idx)">+</button>
                 </div>
               </td>
 
-              {{-- HARGA (auto) --}}
+
+              {{-- Harga satuan (auto dari services) --}}
               <td class="px-3 py-2 text-right"
                   x-text="formatRupiah(unitPrice(r.service_id))"></td>
 
+              {{-- Metode --}}
               <td class="px-3 py-2 text-center">
                 <select class="border rounded px-2 py-1"
                         :name="`rows[${idx}][metode_pembayaran_id]`" x-model="r.metode_pembayaran_id">
@@ -64,7 +77,7 @@
                 </select>
               </td>
 
-              {{-- TOTAL (qty × harga) --}}
+              {{-- Total (qty × harga) --}}
               <td class="px-3 py-2 text-right"
                   x-text="formatRupiah(r.qty * unitPrice(r.service_id))"></td>
 
@@ -84,16 +97,14 @@
       <form method="POST" action="{{ route('admin.rekap.store') }}">
         @csrf
 
-        {{-- sinkronkan nilai ke hidden input agar controller tetap menerima subtotal & total --}}
+        {{-- mirror SEMUA field yang dibutuhkan controller --}}
         <template x-for="(r,idx) in rows" :key="'h'+idx">
           <div class="hidden">
-            <input type="hidden" :name="`rows[${idx}][service_id]`" :value="r.service_id">
-            <input type="hidden" :name="`rows[${idx}][qty]`" :value="r.qty">
-            {{-- subtotal = HARGA SATUAN dari services --}}
-            <input type="hidden" :name="`rows[${idx}][subtotal]`" :value="unitPrice(r.service_id)">
-            <input type="hidden" :name="`rows[${idx}][metode_pembayaran_id]`" :value="r.metode_pembayaran_id">
-            {{-- total = qty × harga --}}
-            <input type="hidden" :name="`rows[${idx}][total]`" :value="r.qty * unitPrice(r.service_id)">
+            <input type="hidden" :name="`rows[${idx}][service_id]`"            :value="r.service_id">
+            <input type="hidden" :name="`rows[${idx}][qty]`"                   :value="r.qty">
+            <input type="hidden" :name="`rows[${idx}][metode_pembayaran_id]`"  :value="r.metode_pembayaran_id">
+            <input type="hidden" :name="`rows[${idx}][subtotal]`"              :value="unitPrice(r.service_id)">
+            <input type="hidden" :name="`rows[${idx}][total]`"                 :value="r.qty * unitPrice(r.service_id)">
           </div>
         </template>
 
@@ -104,8 +115,7 @@
     </div>
   </section>
 
-
-  {{-- Form Input Pengeluaran --}}
+  {{-- ======================= FORM PENGELUARAN ======================= --}}
   <section x-data="pengeluaranForm()" class="mt-6 bg-white rounded-2xl shadow p-5">
     <div class="text-lg font-bold mb-4">Tabel Pengeluaran</div>
 
@@ -116,7 +126,6 @@
             <th class="px-3 py-2 text-left">No</th>
             <th class="px-3 py-2 text-left">Nama Pengeluaran</th>
             <th class="px-3 py-2 text-left">Harga</th>
-            <th class="px-3 py-2 text-center">Tanggal</th>
             <th class="px-3 py-2 text-center">Metode</th>
             <th class="px-3 py-2"></th>
           </tr>
@@ -125,22 +134,38 @@
           <template x-for="(r,idx) in rows" :key="idx">
             <tr class="border-t">
               <td class="px-3 py-2" x-text="idx+1"></td>
+
               <td class="px-3 py-2">
-                <input class="border rounded px-2 py-1 w-56" :name="`outs[${idx}][keterangan]`" x-model="r.keterangan" placeholder="Nama…">
+                <input class="border rounded px-2 py-1 w-56"
+                       :name="`outs[${idx}][keterangan]`"
+                       x-model="r.keterangan"
+                       placeholder="Nama…">
               </td>
+
+              {{-- Harga ala input saldo kartu: prefix Rp + bertitik --}}
               <td class="px-3 py-2">
-                <input type="number" class="w-28 text-right border rounded px-2 py-1" :name="`outs[${idx}][subtotal]`" x-model.number="r.subtotal">
+                <div class="relative">
+                  <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
+                  <input type="text" inputmode="numeric"
+                         class="w-32 text-right border rounded pl-7 pr-2 py-1"
+                         x-model="r.subtotal_display"
+                         @input="syncHarga(idx)">
+                  <input type="hidden" :name="`outs[${idx}][subtotal]`" :value="r.subtotal">
+                </div>
               </td>
+
+              {{-- Metode: sembunyikan opsi BON --}}
               <td class="px-3 py-2 text-center">
-                <input type="date" class="border rounded px-2 py-1" :name="`outs[${idx}][tanggal]`" x-model="r.tanggal">
-              </td>
-              <td class="px-3 py-2 text-center">
-                <select class="border rounded px-2 py-1" :name="`outs[${idx}][metode_pembayaran_id]`" x-model="r.metode_pembayaran_id">
+                <select class="border rounded px-2 py-1"
+                        :name="`outs[${idx}][metode_pembayaran_id]`" x-model="r.metode_pembayaran_id">
                   @foreach($metodes as $m)
-                    <option value="{{ $m->id }}">{{ $m->nama }}</option>
+                    @if(strtolower($m->nama) !== 'bon')
+                      <option value="{{ $m->id }}">{{ $m->nama }}</option>
+                    @endif
                   @endforeach
                 </select>
               </td>
+
               <td class="px-3 py-2 text-right">
                 <button type="button" class="text-xs underline text-red-600" @click="remove(idx)">hapus</button>
               </td>
@@ -154,15 +179,18 @@
       <button type="button" class="text-sm underline" @click="add()">+ Tambah Baris</button>
       <form method="POST" action="{{ route('admin.rekap.store-pengeluaran') }}">
         @csrf
+
+        {{-- mirror SEMUA field yang dibutuhkan controller --}}
         <template x-for="(r,idx) in rows" :key="'ph'+idx">
           <div class="hidden">
-            <input type="hidden" :name="`outs[${idx}][keterangan]`" :value="r.keterangan">
-            <input type="hidden" :name="`outs[${idx}][subtotal]`" :value="r.subtotal">
-            <input type="hidden" :name="`outs[${idx}][tanggal]`" :value="r.tanggal">
+            <input type="hidden" :name="`outs[${idx}][keterangan]`"           :value="r.keterangan">
+            <input type="hidden" :name="`outs[${idx}][subtotal]`"             :value="r.subtotal">
+            {{-- kamu sudah hilangkan tanggal di UI; biarkan kosong (nullable) --}}
             <input type="hidden" :name="`outs[${idx}][metode_pembayaran_id]`" :value="r.metode_pembayaran_id">
-            <input type="hidden" :name="`outs[${idx}][total]`" :value="r.subtotal">
+            <input type="hidden" :name="`outs[${idx}][total]`"                :value="r.subtotal">
           </div>
         </template>
+
         <button class="inline-flex items-center rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110">
           Submit Pengeluaran
         </button>
@@ -170,79 +198,169 @@
     </div>
   </section>
 
-  {{-- Monitoring saldo kartu --}}
+  {{-- ======================= MONITORING SALDO KARTU ======================= --}}
   <section class="mt-6 bg-white rounded-2xl shadow p-5">
     <div class="text-lg font-bold mb-4">Monitoring Saldo Kartu Laundry</div>
-    <form method="POST" action="{{ route('admin.rekap.store-saldo') }}" class="grid md:grid-cols-3 gap-4">
+
+    <form id="form-saldo-kartu" method="POST" action="{{ route('admin.rekap.store-saldo') }}" class="grid md:grid-cols-3 gap-3">
       @csrf
       <div>
         <label class="text-sm">Sisa saldo kartu hari ini (Rp.)</label>
-        <input name="saldo_kartu" type="number" class="w-full border rounded px-3 py-2" value="{{ old('saldo_kartu',) }}">
+        <div class="relative mt-1">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
+          <input id="saldo_kartu_display" type="text" inputmode="numeric" autocomplete="off"
+                 class="w-full border rounded px-3 py-2 pl-9"
+                 value="{{ old('saldo_kartu') ? number_format((int)old('saldo_kartu'),0,',','.') : '' }}"
+                 aria-label="Sisa saldo kartu (contoh: 4.000.000)">
+          <input id="saldo_kartu" name="saldo_kartu" type="hidden" value="{{ old('saldo_kartu') }}">
+        </div>
+        @error('saldo_kartu')
+          <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+        @enderror
       </div>
+
       <div>
         <label class="text-sm">Jumlah Tap Gagal</label>
-        <input name="tap_gagal" type="number" class="w-full border rounded px-3 py-2" value="{{ old('tap_gagal',) }}">
+        <input name="tap_gagal" type="text" inputmode="numeric" pattern="\d*"
+               autocomplete="off" class="w-full border rounded px-3 py-2"
+               value="{{ old('tap_gagal', 0) }}">
+        @error('tap_gagal')
+          <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+        @enderror
       </div>
+
       <div class="flex items-end">
         <button class="w-full md:w-auto px-5 py-3 rounded-lg bg-gray-800 text-white">Submit Saldo Kartu</button>
       </div>
     </form>
   </section>
 
-
+  {{-- ======================= SCRIPTS ======================= --}}
   <script>
-    // siapkan data service -> harga dari PHP ke JS
-    const SERVICE_MAP = Object.fromEntries([
-      @foreach($services as $s)
-        ['{{ $s->id }}', {{ (int)$s->harga_service }}],
-      @endforeach
-    ]);
+  // Map service_id -> harga satuan
+  const SERVICE_MAP = Object.fromEntries([
+    @foreach($services as $s)
+      ['{{ $s->id }}', {{ (int)$s->harga_service }}],
+    @endforeach
+  ]);
 
-    function formatRupiah(n){
-      n = Number(n||0);
-      return 'Rp ' + n.toLocaleString('id-ID');
-    }
+  const toID = n => (Number(n)||0).toLocaleString('id-ID');
+  const onlyDigits = s => (s||'').replace(/\D/g,'');
+  const formatRupiah = n => 'Rp ' + toID(n);
 
-    function omsetForm() {
-      return {
-        rows: [{
+  // ---------- OMSET ----------
+  function omsetForm() {
+    return {
+      rows: [{
+        service_id: '',
+        qty: 1,
+        qty_display: '1',
+        metode_pembayaran_id: '{{ $defaultNonBon }}'
+      }],
+
+      unitPrice(id){ return SERVICE_MAP[String(id)] ?? 0; },
+      formatRupiah,
+
+      // ketik manual -> bersihkan & sinkronkan
+      syncQty(i){
+        const d = onlyDigits(this.rows[i].qty_display);
+        let n = parseInt(d || '1', 10);
+        if (!n || n < 1) n = 1;
+        this.rows[i].qty = n;
+        this.rows[i].qty_display = String(n);
+      },
+
+      // tombol +
+      inc(i){
+        const n = Math.max(1, (this.rows[i].qty || 1) + 1);
+        this.rows[i].qty = n;
+        this.rows[i].qty_display = String(n);
+      },
+
+      // tombol −
+      dec(i){
+        const n = Math.max(1, (this.rows[i].qty || 1) - 1);
+        this.rows[i].qty = n;
+        this.rows[i].qty_display = String(n);
+      },
+
+      add(){
+        this.rows.push({
           service_id: '',
           qty: 1,
-          metode_pembayaran_id: '{{ optional($metodes->first())->id }}'
-        }],
-        unitPrice(id){ return SERVICE_MAP[String(id)] ?? 0; },
-        formatRupiah,
-        add(){
-          this.rows.push({
-            service_id: '',
-            qty: 1,
-            metode_pembayaran_id: '{{ optional($metodes->first())->id }}'
-          });
-        },
-        remove(i){ this.rows.splice(i,1); }
+          qty_display: '1',
+          metode_pembayaran_id: '{{ $defaultNonBon }}'
+        });
+      },
+      remove(i){ this.rows.splice(i,1); }
+    }
+  }
+
+  // ---------- PENGELUARAN ----------
+  function pengeluaranForm() {
+    return {
+      rows: [{
+        keterangan:'', subtotal:0, subtotal_display:'0',
+        metode_pembayaran_id:'{{ $defaultNonBon }}'
+      }],
+
+      formatID: toID,
+
+      // format harga bertitik saat ketik
+      syncHarga(i){
+        const d = onlyDigits(this.rows[i].subtotal_display);
+        const n = parseInt(d || '0', 10);
+        this.rows[i].subtotal = n;
+        this.rows[i].subtotal_display = this.formatID(n);
+      },
+
+      add(){
+        this.rows.push({
+          keterangan:'', subtotal:0, subtotal_display:'0',
+          metode_pembayaran_id:'{{ $defaultNonBon }}'
+        });
+      },
+      remove(i){ this.rows.splice(i,1); }
+    }
+  }
+
+  // ---------- SALDO KARTU ----------
+  (function(){
+    const CAP = 5000000;
+    const fmt = new Intl.NumberFormat('id-ID');
+    const form = document.getElementById('form-saldo-kartu');
+    const display = document.getElementById('saldo_kartu_display');
+    const hidden  = document.getElementById('saldo_kartu');
+
+    const sanitize = s => (s || '').replace(/[^\d]/g, '');
+
+    function renderFromDisplay() {
+      let digits = sanitize(display.value);
+      if (digits.length) {
+        let n = parseInt(digits, 10) || 0;
+        if (n > CAP) n = CAP;
+        hidden.value = n;
+        display.value = fmt.format(n);
+      } else {
+        hidden.value = '';
+        display.value = '';
       }
     }
 
+    // init dari old()
+    renderFromDisplay();
 
-    function pengeluaranForm() {
-      return {
-        rows: [{
-          keterangan:'',
-          subtotal:0,
-          tanggal:new Date().toISOString().slice(0,10),
-          metode_pembayaran_id:'{{ optional($metodes->first())->id }}'
-        }],
-        add(){
-          this.rows.push({
-            keterangan:'',
-            subtotal:0,
-            tanggal:new Date().toISOString().slice(0,10),
-            metode_pembayaran_id:'{{ optional($metodes->first())->id }}'
-          });
-        },
-        remove(i){ this.rows.splice(i,1); }
-      }
-    }
-  </script>
+    display.addEventListener('input', () => {
+      const wasEnd = display.selectionStart === display.value.length;
+      renderFromDisplay();
+      if (wasEnd) display.setSelectionRange(display.value.length, display.value.length);
+    });
 
+    form.addEventListener('submit', () => {
+      let n = parseInt(sanitize(display.value || ''), 10) || 0;
+      if (n > CAP) n = CAP;
+      hidden.value = n;
+    });
+  })();
+</script>
 @endsection

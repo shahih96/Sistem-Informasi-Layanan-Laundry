@@ -157,7 +157,6 @@
                       $qty   = max(1, (int)($row->qty ?? 1));
                       $harga = (int) optional($row->service)->harga_service;
                       $total = $qty * $harga;
-                      $pay   = $row->pembayaran ?? 'belum_lunas';
 
                       $statusText = $row->latestStatusLog?->status?->nama_status
                                     ?? $row->latestStatusLog?->keterangan
@@ -180,12 +179,21 @@
                       <td class="px-6 py-4 text-right">Rp {{ number_format($total,0,',','.') }}</td>
 
                       <td class="px-6 py-4 text-center">
-                        @php $isLunas = $pay === 'lunas'; @endphp
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs {{ $isLunas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200' }}">
-                          {{ $isLunas ? 'Lunas' : 'Belum Lunas' }}
-                        </span>
-                      </td>
+                        @php
+                          // ambil dari relasi metode yang sudah di-with di controller
+                          $metodeNow = strtolower($row->metode->nama ?? 'bon'); // default bon jika null
+                        @endphp
 
+                        @if($metodeNow === 'bon')
+                          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">
+                            Belum Lunas
+                          </span>
+                        @else
+                          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                            Lunas
+                          </span>
+                        @endif
+                      </td>
                       <td class="px-6 py-4">{{ $row->created_at?->translatedFormat('d M Y, H:i') ?? '-' }}</td>
                       <td class="px-6 py-4">{{ $statusText }}</td>
                       <td class="px-6 py-4">{{ $updatedAt?->translatedFormat('d M Y, H:i') ?? '-' }}</td>

@@ -16,234 +16,249 @@
       Tampilkan
     </button>
   </form>
-
-  <div class="flex items-center gap-2">
-    <a href="{{ route('admin.rekap.index', ['d' => now()->toDateString()]) }}"
-       class="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:brightness-110">
-      Hari Ini
-    </a>
-  </div>
-
-  <div class="text-sm text-gray-600 ml-auto">
-    Menampilkan rekap tanggal:
-    <strong>{{ \Carbon\Carbon::parse(request('d', optional($day ?? now())->toDateString()))->translatedFormat('l, d M Y') }}</strong>
-  </div>
 </div>
 
-<!-- {{-- Ringkasan Keuangan (atas) --}} -->
-<div class="grid md:grid-cols-4 gap-4">
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Total Cash Laundry (Akumulasi)</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalCash,0,',','.') }}</div>
-  </div>
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Total Bon Pelanggan (Akumulasi)</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalPiutang ?? 0,0,',','.') }}</div>
-  </div>
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Total Fee Karyawan Hari ini</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalFee ?? 0,0,',','.') }}</div>
-    <div class="text-xs text-gray-500 mt-1">
-      (Lipat {{ $kgLipatTerbayar }} Kg: Rp {{ number_format($feeLipat,0,',','.') }},
-      Setrika {{ $setrikaKgTotal }} Kg: Rp {{ number_format($feeSetrika,0,',','.') }})
+<div id="rekap-sheet" class="mt-2 p-2">
+  <div class="text-sm text-gray-600 ml-auto pb-2">
+      Menampilkan rekap tanggal:
+      <strong>{{ \Carbon\Carbon::parse(request('d', optional($day ?? now())->toDateString()))->translatedFormat('l, d M Y') }}</strong>
     </div>
-    <div class="text-[11px] text-gray-500 mt-1">
-    Sisa kg lipat yang dibawa ke besok:
-    <strong>{{ $sisaLipatBaru ?? 0 }} Kg</strong>
+
+  <!-- {{-- Ringkasan Keuangan (atas) --}} -->
+  <div class="grid md:grid-cols-4 gap-4 capture-desktop-4">
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Total Cash Laundry (Akumulasi)</div>
+      <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalCash,0,',','.') }}</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Total Bon Pelanggan (Akumulasi)</div>
+      <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalPiutang ?? 0,0,',','.') }}</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Total Fee Karyawan Hari ini</div>
+      <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalFee ?? 0,0,',','.') }}</div>
+      <div class="text-xs text-gray-500 mt-1">
+        (Lipat {{ $kgLipatTerbayar }} Kg: Rp {{ number_format($feeLipat,0,',','.') }},
+        Setrika {{ $setrikaKgTotal }} Kg: Rp {{ number_format($feeSetrika,0,',','.') }})
+      </div>
+      <div class="text-[11px] text-gray-500 mt-1">
+      Sisa kg lipat yang dibawa ke besok:
+      <strong>{{ $sisaLipatBaru ?? 0 }} Kg</strong>
+      </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Total Omset Bersih Hari Ini</div>
+      <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalOmzetBersihHariIni,0,',','.') }}</div>
+      <div class="text-xs text-gray-500 mt-1">(Kotor: Rp {{ number_format($totalOmzetKotorHariIni,0,',','.') }} − Fee: Rp {{ number_format($totalFee,0,',','.') }})</div>
     </div>
   </div>
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Total Pendapatan Hari Ini</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalOmzetHariIni,0,',','.') }}</div>
+  <div class="mt-4 grid md:grid-cols-3 gap-4 capture-desktop-3">
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Sisa Saldo Kartu Hari Ini</div>
+      <div class="mt-2 text-3xl font-bold">{{ is_null($saldoKartu) ? '—' : 'Rp '.number_format($saldoKartu,0,',','.') }}</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Total Tap Kartu Hari Ini</div>
+      <div class="mt-2 text-3xl font-bold">{{ number_format($totalTapHariIni,0,',','.') }}</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow">
+      <div class="text-sm opacity-70">Tap Gagal Hari Ini</div>
+      <div class="mt-2 text-3xl font-bold">{{ number_format($tapGagalHariIni,0,',','.') }}</div>
+    </div>
   </div>
-</div>
-<div class="mt-4 grid md:grid-cols-3 gap-4">
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Sisa Saldo Kartu Hari Ini</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($saldoKartu,0,',','.') }}</div>
-  </div>
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Total Tap Kartu Hari Ini</div>
-    <div class="mt-2 text-3xl font-bold">{{ number_format($totalTapHariIni,0,',','.') }}</div>
-  </div>
-  <div class="bg-white p-5 rounded-xl shadow">
-    <div class="text-sm opacity-70">Tap Gagal Hari Ini</div>
-    <div class="mt-2 text-3xl font-bold">{{ number_format($tapGagalHariIni,0,',','.') }}</div>
-  </div>
-</div>
 
-<!-- {{-- Tabel Omset --}} -->
-<div class="mt-8 bg-white p-5 rounded-xl shadow">
-  <div class="font-semibold mb-3">Tabel Omset Hari Ini</div>
-  <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-3 py-2">No</th>
-          <th class="px-3 py-2 text-left">Nama Layanan</th>
-          <th class="px-3 py-2 text-center">Kuantitas</th>
-          <th class="px-3 py-2 text-right">Harga</th>
-          <th class="px-3 py-2 text-center">Metode</th>
-          <th class="px-3 py-2 text-right">Total</th>
-          <th class="px-3 py-2 text-right">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        @foreach($omset as $i => $r)
-          <tr class="border-t">
-            <td class="px-3 py-2">{{ ($omset->currentPage()-1)*$omset->perPage() + $loop->iteration }}</td>
-            <td class="px-3 py-2">{{ $r->service->nama_service ?? '-' }}</td>
-            <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
-            <td class="px-3 py-2 text-right">Rp {{ number_format($r->subtotal,0,',','.') }}</td>
-            <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-            <td class="px-3 py-2 text-right">Rp {{ number_format($r->total,0,',','.') }}</td>
-            <td class="px-3 py-2 text-right">
-              {{-- Hapus 1 grup omzet: service_id + metode_pembayaran_id --}}
-              <form method="POST" action="{{ route('admin.rekap.destroy-group') }}"
-                    onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
-                @csrf @method('DELETE')
-                <input type="hidden" name="service_id" value="{{ $r->service_id }}">
-                <input type="hidden" name="metode_pembayaran_id" value="{{ $r->metode_pembayaran_id }}">
-                {{-- Jika ingin batasi per tanggal, kirimkan juga hidden "tanggal" --}}
-                {{-- <input type="hidden" name="tanggal" value="{{ optional($r->created_at)->toDateString() }}"> --}}
-                <button class="text-xs underline text-red-600">Hapus</button>
-              </form>
-            </td>
+  <!-- {{-- Tabel Omset --}} -->
+  <div class="mt-8 bg-white p-5 rounded-xl shadow">
+    <div class="font-semibold mb-3">Tabel Omset Hari Ini</div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 py-2">No</th>
+            <th class="px-3 py-2 text-left">Nama Layanan</th>
+            <th class="px-3 py-2 text-center">Kuantitas</th>
+            <th class="px-3 py-2 text-right">Harga</th>
+            <th class="px-3 py-2 text-center">Metode</th>
+            <th class="px-3 py-2 text-right">Total</th>
+            <th class="px-3 py-2 text-right">Aksi</th>
           </tr>
-        @endforeach
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @foreach($omset as $i => $r)
+            <tr class="border-t">
+              <td class="px-3 py-2">{{ ($omset->currentPage()-1)*$omset->perPage() + $loop->iteration }}</td>
+              <td class="px-3 py-2">{{ $r->service->nama_service ?? '-' }}</td>
+              <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
+              <td class="px-3 py-2 text-right">Rp {{ number_format($r->subtotal,0,',','.') }}</td>
+              <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
+              <td class="px-3 py-2 text-right">Rp {{ number_format($r->total,0,',','.') }}</td>
+              <td class="px-3 py-2 text-right">
+                {{-- Hapus 1 grup omzet: service_id + metode_pembayaran_id --}}
+                <form method="POST" action="{{ route('admin.rekap.destroy-group') }}"
+                      onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
+                  @csrf @method('DELETE')
+                  <input type="hidden" name="service_id" value="{{ $r->service_id }}">
+                  <input type="hidden" name="metode_pembayaran_id" value="{{ $r->metode_pembayaran_id }}">
+                  {{-- Jika ingin batasi per tanggal, kirimkan juga hidden "tanggal" --}}
+                  {{-- <input type="hidden" name="tanggal" value="{{ optional($r->created_at)->toDateString() }}"> --}}
+                  <button class="text-xs underline text-red-600">Hapus</button>
+                </form>
+              </td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-2">{{ $omset->links('pagination::tailwind') }}</div>
   </div>
-  <div class="mt-2">{{ $omset->links('pagination::tailwind') }}</div>
-</div>
 
-<!-- {{-- Tabel Pengeluaran --}} -->
-<div class="mt-8 bg-white p-5 rounded-xl shadow">
-  <div class="font-semibold mb-3">Tabel Pengeluaran Hari Ini</div>
-  <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-3 py-2">No</th>
-          <th class="px-3 py-2 text-left">Nama</th>
-          <th class="px-3 py-2 text-center">Metode</th>
-          <th class="px-3 py-2 text-right">Harga</th>
-          <th class="px-3 py-2 text-right">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        @foreach($pengeluaran as $i => $r)
-          <tr class="border-t">
-            <td class="px-3 py-2">{{ $pengeluaran->firstItem() + $i }}</td>
-            <td class="px-3 py-2">{{ $r->keterangan ?? '-' }}</td>
-            <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-            <td class="px-3 py-2 text-right">Rp {{ number_format($r->total,0,',','.') }}</td>
-            <td class="px-3 py-2 text-right">
-              <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
-                    onsubmit="return confirm('Hapus baris ini?')">
-                @csrf @method('DELETE')
-                <button class="text-xs underline text-red-600">Hapus</button>
-              </form>
-            </td>
+  <!-- {{-- Tabel Pengeluaran --}} -->
+  <div class="mt-8 bg-white p-5 rounded-xl shadow">
+    <div class="font-semibold mb-3">Tabel Pengeluaran Hari Ini</div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 py-2">No</th>
+            <th class="px-3 py-2 text-left">Nama</th>
+            <th class="px-3 py-2 text-center">Metode</th>
+            <th class="px-3 py-2 text-right">Harga</th>
+            <th class="px-3 py-2 text-right">Aksi</th>
           </tr>
-        @endforeach
-      </tbody>
-    </table>
-  </div>
-  <div class="mt-2">{{ $pengeluaran->links('pagination::tailwind') }}</div>
-</div>
+        </thead>
+        <tbody>
+          @foreach($pengeluaran as $i => $r)
+            <tr class="border-t">
+              <td class="px-3 py-2">{{ $pengeluaran->firstItem() + $i }}</td>
+              <td class="px-3 py-2">
+                {{ $r->keterangan ?? '-' }}
 
-<!-- {{-- Tabel Bon Pelanggan --}} -->
-<div class="mt-8 bg-white p-5 rounded-xl shadow">
-  <div class="font-semibold mb-3">Tabel Bon Pelanggan</div>
-  <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-3 py-2">No</th>
-          <th class="px-3 py-2 text-left">Nama Pelanggan</th>
-          <th class="px-3 py-2 text-left">Layanan</th>
-          <th class="px-3 py-2 text-center">Kuantitas</th>
-          <th class="px-3 py-2 text-right">Total</th>
-          <th class="px-3 py-2 text-center">Tanggal Masuk</th>
-          <th class="px-3 py-2 text-center">Metode</th>   {{-- baru --}}
-          <th class="px-3 py-2 text-center">Pembayaran</th>
-        </tr>
-      </thead>
-      <tbody>
-      @forelse($bon as $i => $p)
-        @php
-        $asOfStart = ($day ?? now())->copy()->startOfDay();
-        $asOfEnd   = ($day ?? now())->copy()->endOfDay();
+                @php
+                  // deteksi "owner draw" → hanya penanda visual
+                  $isOwnerDraw = str($r->keterangan ?? '')->lower()->contains([
+                    'bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas', 'tarik',
+                  ]);
+                @endphp
 
-        $qty   = max(1, (int)($p->qty ?? 1));
-        $harga = (int)($p->service->harga_service ?? 0);
-        $total = $qty * $harga;
-
-        $metodeNow = strtolower($p->metode->nama ?? 'bon');
-
-        // MASIH BON per akhir hari terpilih jika:
-        // - sekarang masih bon, ATAU
-        // - sekarang sudah lunas tapi updated_at > asOfEnd (artinya pada tanggal yang dilihat masih bon)
-        $isBonAsOfEnd = ($metodeNow === 'bon')
-            || (($metodeNow !== 'bon') && optional($p->updated_at)->gt($asOfEnd));
-
-        // Baru dilunasi pada tanggal terpilih?
-        $dibayarHariIni = ($metodeNow !== 'bon')
-            && optional($p->updated_at)->between($asOfStart, $asOfEnd);
-        @endphp
-        <tr class="border-t">
-          <td class="px-3 py-2">{{ ($bon->currentPage()-1)*$bon->perPage() + $loop->iteration }}</td>
-
-          <td class="px-3 py-2">
-            <div class="font-medium">{{ $p->nama_pel }}</div>
-            <div class="text-xs text-gray-500">{{ $p->no_hp_pel }}</div>
-          </td>
-
-          <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
-          <td class="px-3 py-2 text-center">{{ $qty }}</td>
-          <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
-          <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
-
-          {{-- Metode (dropdown) --}}
-          <td class="px-3 py-2 text-center">
-            <form method="POST" action="{{ route('admin.rekap.update-bon', $p) }}">
-              @csrf
-              @method('PATCH')
-              <select name="metode" class="border rounded px-2 py-1 text-xs" onchange="this.form.submit()">
-                <option value="bon"   {{ $metodeNow==='bon'   ? 'selected' : '' }}>Bon</option>
-                <option value="tunai" {{ $metodeNow==='tunai' ? 'selected' : '' }}>Tunai</option>
-                <option value="qris"  {{ $metodeNow==='qris'  ? 'selected' : '' }}>QRIS</option>
-              </select>
-            </form>
-          </td>
-
-          {{-- Pembayaran badge --}}
-          <td class="px-3 py-2 text-center">
-            @if($isBonAsOfEnd)
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">
-                Belum Lunas
-              </span>
-            @else
-              <div class="flex flex-col items-center gap-1">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
-                  Lunas
-                </span>
-                @if($dibayarHariIni)
-                  <p class="text-[11px] text-gray-500">dibayar hari ini</p>
+                @if($isOwnerDraw)
+                  <span
+                    class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                          bg-blue-50 text-blue-700 border border-blue-200"
+                    title="Tidak dihitung sebagai pengeluaran bulan ini"
+                  >
+                    Tarik Kas
+                  </span>
                 @endif
-              </div>
-            @endif
-          </td>
-        </tr>
-      @empty
-        <tr><td colspan="8" class="px-3 py-4 text-center text-gray-500">Tidak ada data bon pelanggan.</td></tr>
-      @endforelse
-      </tbody>
-    </table>
+              </td>
+              <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
+              <td class="px-3 py-2 text-right">Rp {{ number_format($r->total,0,',','.') }}</td>
+              <td class="px-3 py-2 text-right">
+                <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
+                      onsubmit="return confirm('Hapus baris ini?')">
+                  @csrf @method('DELETE')
+                  <button class="text-xs underline text-red-600">Hapus</button>
+                </form>
+              </td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-2">{{ $pengeluaran->links('pagination::tailwind') }}</div>
   </div>
-  <div class="mt-2">{{ $bon->links('pagination::tailwind') }}</div>
-</div>
+
+  <!-- {{-- Tabel Bon Pelanggan --}} -->
+  <div class="mt-8 bg-white p-5 rounded-xl shadow">
+    <div class="font-semibold mb-3">Tabel Bon Pelanggan</div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 py-2">No</th>
+            <th class="px-3 py-2 text-left">Nama Pelanggan</th>
+            <th class="px-3 py-2 text-left">Layanan</th>
+            <th class="px-3 py-2 text-center">Kuantitas</th>
+            <th class="px-3 py-2 text-right">Total</th>
+            <th class="px-3 py-2 text-center">Tanggal Masuk</th>
+            <th class="px-3 py-2 text-center">Metode</th>   {{-- baru --}}
+            <th class="px-3 py-2 text-center">Pembayaran</th>
+          </tr>
+        </thead>
+        <tbody>
+        @forelse($bon as $i => $p)
+          @php
+          $asOfStart = ($day ?? now())->copy()->startOfDay();
+          $asOfEnd   = ($day ?? now())->copy()->endOfDay();
+
+          $qty   = max(1, (int)($p->qty ?? 1));
+          $harga = (int)($p->service->harga_service ?? 0);
+          $total = $qty * $harga;
+
+          $metodeNow = strtolower($p->metode->nama ?? 'bon');
+
+          // MASIH BON per akhir hari terpilih jika:
+          // - sekarang masih bon, ATAU
+          // - sekarang sudah lunas tapi updated_at > asOfEnd (artinya pada tanggal yang dilihat masih bon)
+          $isBonAsOfEnd = ($metodeNow === 'bon')
+              || (($metodeNow !== 'bon') && optional($p->updated_at)->gt($asOfEnd));
+
+          // Baru dilunasi pada tanggal terpilih?
+          $dibayarHariIni = ($metodeNow !== 'bon')
+              && optional($p->updated_at)->between($asOfStart, $asOfEnd);
+          @endphp
+          <tr class="border-t">
+            <td class="px-3 py-2">{{ ($bon->currentPage()-1)*$bon->perPage() + $loop->iteration }}</td>
+
+            <td class="px-3 py-2">
+              <div class="font-medium">{{ $p->nama_pel }}</div>
+              <div class="text-xs text-gray-500">{{ $p->no_hp_pel }}</div>
+            </td>
+
+            <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
+            <td class="px-3 py-2 text-center">{{ $qty }}</td>
+            <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
+            <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
+
+            {{-- Metode (dropdown) --}}
+            <td class="px-3 py-2 text-center">
+              <form method="POST" action="{{ route('admin.rekap.update-bon', $p) }}">
+                @csrf
+                @method('PATCH')
+                <select name="metode" class="border rounded px-2 py-1 text-xs" onchange="this.form.submit()">
+                  <option value="bon"   {{ $metodeNow==='bon'   ? 'selected' : '' }}>Bon</option>
+                  <option value="tunai" {{ $metodeNow==='tunai' ? 'selected' : '' }}>Tunai</option>
+                  <option value="qris"  {{ $metodeNow==='qris'  ? 'selected' : '' }}>QRIS</option>
+                </select>
+              </form>
+            </td>
+
+            {{-- Pembayaran badge --}}
+            <td class="px-3 py-2 text-center">
+              @if($isBonAsOfEnd)
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">
+                  Belum Lunas
+                </span>
+              @else
+                <div class="flex flex-col items-center gap-1">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                    Lunas
+                  </span>
+                  @if($dibayarHariIni)
+                    <p class="text-[11px] text-gray-500">dibayar hari ini</p>
+                  @endif
+                </div>
+              @endif
+            </td>
+          </tr>
+        @empty
+          <tr><td colspan="8" class="px-3 py-4 text-center text-gray-500">Tidak ada data bon pelanggan.</td></tr>
+        @endforelse
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-2">{{ $bon->links('pagination::tailwind') }}</div>
+  </div>
+</div> <!-- end rekap-sheet -->
 
 <!-- {{-- Tombol Input Rekap --}} -->
 <div class="mt-6 text-right">
@@ -254,6 +269,121 @@
     </svg>
     Input & Update Rekap
   </a>
+  <button id="btn-download-jpg" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110 no-export">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+    </svg>
+    Download JPG
 </div>
+
+<!-- html-to-image (CDN + fallback) -->
+<script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+<script>
+  window.addEventListener('load', function () {
+    if (!window.htmlToImage) {
+      const s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.min.js';
+      document.head.appendChild(s);
+    }
+  });
+</script>
+
+<!-- Style khusus saat capture (paksa tampilan desktop & hilangkan scroll)
+     >>> TIDAK mematikan shadow supaya kartu tetap “mengambang” seperti di layar <<< -->
+<style>
+  /* aktif hanya saat root diberi .capture-mode */
+  #rekap-sheet.capture-mode {
+    background: #ffffff !important;
+    padding: 16px;
+  }
+
+  /* jangan sembunyikan shadow — biarkan seperti UI */
+  /* #rekap-sheet.capture-mode .shadow { box-shadow: none !important; }  <-- DIHAPUS */
+
+  /* hilangkan overflow agar tabel tak terpotong */
+  #rekap-sheet.capture-mode .overflow-x-auto,
+  #rekap-sheet.capture-mode .overflow-y-auto,
+  #rekap-sheet.capture-mode .overflow-auto { overflow: visible !important; }
+  #rekap-sheet.capture-mode ::-webkit-scrollbar { display: none !important; }
+
+  /* Paksa grid desktop saat capture (abaikan breakpoint “md”) */
+  #rekap-sheet.capture-mode .capture-desktop-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+  #rekap-sheet.capture-mode .capture-desktop-3 {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+</style>
+
+<script>
+  (function () {
+    const btn  = document.getElementById('btn-download-jpg'); // tombol
+    const root = document.getElementById('rekap-sheet');      // area yang di-capture
+    if (!btn || !root) return;
+
+    const EXPORT_WIDTH = 1280; // render selebar desktop
+
+    function toggleCapture(on) {
+      if (on) {
+        root.classList.add('capture-mode');
+      } else {
+        root.classList.remove('capture-mode');
+        root.style.width = '';
+        root.style.height = '';
+        root.style.maxWidth = '';
+      }
+    }
+
+    btn.addEventListener('click', async () => {
+      try {
+        if (!window.htmlToImage) {
+          alert('Library html-to-image belum termuat. Coba refresh halaman.');
+          return;
+        }
+
+        // 1) Aktifkan mode capture (paksa desktop & non-scroll)
+        toggleCapture(true);
+
+        // 2) Paksa lebar desktop agar layout mengikuti desktop
+        root.style.maxWidth = 'none';
+        root.style.width    = EXPORT_WIDTH + 'px';
+        await new Promise(r => requestAnimationFrame(r)); // biar reflow dulu
+
+        // 3) Hitung tinggi penuh konten
+        const w = root.scrollWidth;
+        const h = root.scrollHeight;
+        root.style.height = h + 'px';
+
+        // 4) Render ke JPG (pixelRatio dinaikkan supaya tajam)
+        const dataUrl = await window.htmlToImage.toJpeg(root, {
+          quality: 0.95,
+          backgroundColor: '#ffffff',
+          pixelRatio: Math.max(2, window.devicePixelRatio || 1),
+          style: { width: w + 'px', height: h + 'px' },
+          filter: (n) => !n.classList || !n.classList.contains('no-export'),
+        });
+
+        // 5) Download
+        const dateLabel = "{{ \Illuminate\Support\Str::of(request('d', optional($day ?? now())->toDateString()))->replace(':','-') }}";
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `rekap-${dateLabel}.jpg`;
+        a.click();
+
+      } catch (e) {
+        alert('Gagal membuat JPG: ' + (e?.message || e));
+        console.error(e);
+      } finally {
+        // 6) Balik ke tampilan normal
+        toggleCapture(false);
+      }
+    });
+  })();
+</script>
 
 @endsection
