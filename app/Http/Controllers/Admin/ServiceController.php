@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
 
 class ServiceController extends Controller
 {
@@ -14,24 +16,81 @@ class ServiceController extends Controller
         return view('admin.services.index', compact('services'));
     }
 
-    public function store(Request $r)
+    public function store(Request $request)
     {
-        $data = $r->validate([
-            'nama_service'  => 'required|string|max:100',
-            'harga_service' => 'required|integer|min:0',
+        // Normalisasi input
+        $nama = trim($request->input('nama_service'));
+        $harga = (int) preg_replace('/\D+/', '', (string) $request->input('harga_service'));
+
+        // Validasi: unik nama_service (case-insensitive praktis di app level)
+        $request->validate([
+            'nama_service'  => 'required|string|max:150',
+            'harga_service' => 'required',
         ]);
-        Service::create($data);
-        return back()->with('ok','Layanan ditambahkan.');
+
+        // Cek manual (case-insensitive)
+        $exists = Service::whereRaw('LOWER(nama_service) = ?', [mb_strtolower($nama)])->exists();
+        if ($exists) {
+            return back()->withInput()->with('error', 'Nama layanan sudah ada, gunakan nama lain.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            Service::create([
+                'nama_service'  => $nama,
+                'harga_service' => $harga,
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Layanan berhasil ditambahkan.');
+        } catch (QueryException $e) {
+            DB::rollBack();
+
+            // 23000 = integrity constraint violation (mis. unique index)
+            if ($e->getCode() === '23000') {
+                return back()->withInput()->with('error', 'Nama layanan sudah terdaftar.');
+            }
+
+            return back()->withInput()->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
+        }
     }
 
-    public function update(Request $r, Service $service)
+    public function update(Request $request, Service $service)
     {
-        $data = $r->validate([
-            'nama_service'  => 'required|string|max:100',
-            'harga_service' => 'required|integer|min:0',
+        $nama  = trim($request->input('nama_service'));
+        $harga = (int) preg_replace('/\D+/', '', (string) $request->input('harga_service'));
+
+        $request->validate([
+            'nama_service'  => 'required|string|max:150',
+            'harga_service' => 'required',
         ]);
-        $service->update($data);
-        return back()->with('ok','Layanan diupdate.');
+
+        // Cek manual unik selain dirinya sendiri (case-insensitive)
+        $exists = Service::whereRaw('LOWER(nama_service) = ?', [mb_strtolower($nama)])
+            ->where('id', '!=', $service->id)
+            ->exists();
+        if ($exists) {
+            return back()->with('error', 'Nama layanan sudah ada, gunakan nama lain.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $service->update([
+                'nama_service'  => $nama,
+                'harga_service' => $harga,
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Layanan berhasil diperbarui.');
+        } catch (QueryException $e) {
+            DB::rollBack();
+            if ($e->getCode() === '23000') {
+                return back()->with('error', 'Nama layanan sudah terdaftar.');
+            }
+            return back()->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
+        }
     }
 
     public function destroy(Service $service)

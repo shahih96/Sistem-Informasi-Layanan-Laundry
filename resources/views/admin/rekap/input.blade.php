@@ -15,8 +15,19 @@
   </div>
 
   {{-- ======================= FORM OMSET ======================= --}}
-  <section x-data="omsetForm()" class="mt-6 bg-white rounded-2xl shadow p-5">
+  <section x-data="omsetForm()" class="mt-6 bg-white rounded-2xl shadow p-5" id="form-omzet">
     <div class="text-lg font-bold mb-4">Tabel Omset</div>
+
+    {{-- ERROR OMZET --}}
+    @if ($errors->omzet->any())
+      <div class="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+        <ul class="list-disc pl-5">
+          @foreach ($errors->omzet->all() as $e)
+            <li>{{ $e }}</li>
+          @endforeach
+        </ul>
+      </div>
+    @endif
 
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
@@ -61,7 +72,6 @@
                   <button type="button" class="h-7 w-7 rounded border" @click="inc(idx)">+</button>
                 </div>
               </td>
-
 
               {{-- Harga satuan (auto dari services) --}}
               <td class="px-3 py-2 text-right"
@@ -116,8 +126,19 @@
   </section>
 
   {{-- ======================= FORM PENGELUARAN ======================= --}}
-  <section x-data="pengeluaranForm()" class="mt-6 bg-white rounded-2xl shadow p-5">
+  <section x-data="pengeluaranForm()" class="mt-6 bg-white rounded-2xl shadow p-5" id="form-pengeluaran">
     <div class="text-lg font-bold mb-4">Tabel Pengeluaran</div>
+
+    {{-- ERROR PENGELUARAN --}}
+    @if ($errors->pengeluaran->any())
+      <div class="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+        <ul class="list-disc pl-5">
+          @foreach ($errors->pengeluaran->all() as $e)
+            <li>{{ $e }}</li>
+          @endforeach
+        </ul>
+      </div>
+    @endif
 
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
@@ -199,8 +220,19 @@
   </section>
 
   {{-- ======================= MONITORING SALDO KARTU ======================= --}}
-  <section class="mt-6 bg-white rounded-2xl shadow p-5">
+  <section class="mt-6 bg-white rounded-2xl shadow p-5" id="form-saldo">
     <div class="text-lg font-bold mb-4">Monitoring Saldo Kartu Laundry</div>
+
+    {{-- ERROR SALDO KARTU --}}
+    @if ($errors->saldo->any())
+      <div class="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+        <ul class="list-disc pl-5">
+          @foreach ($errors->saldo->all() as $e)
+            <li>{{ $e }}</li>
+          @endforeach
+        </ul>
+      </div>
+    @endif
 
     <form id="form-saldo-kartu" method="POST" action="{{ route('admin.rekap.store-saldo') }}" class="grid md:grid-cols-3 gap-3">
       @csrf
@@ -362,5 +394,19 @@
       hidden.value = n;
     });
   })();
-</script>
+
+  // ---------- Auto-scroll ke form yang error ----------
+  document.addEventListener('DOMContentLoaded', () => {
+    const flags = [
+      {hasErr: @json($errors->omzet->any()),        sel: '#form-omzet'},
+      {hasErr: @json($errors->pengeluaran->any()),  sel: '#form-pengeluaran'},
+      {hasErr: @json($errors->saldo->any()),        sel: '#form-saldo'},
+    ];
+    const t = flags.find(f => f.hasErr);
+    if (t) {
+      const el = document.querySelector(t.sel);
+      if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+  });
+  </script>
 @endsection

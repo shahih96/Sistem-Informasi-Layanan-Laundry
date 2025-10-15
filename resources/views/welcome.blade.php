@@ -182,150 +182,181 @@
       <h2 class="text-2xl md:text-3xl font-bold text-center">Layanan Kami</h2>
 
       <div class="mt-10 grid gap-6 md:grid-cols-4">
-        @php
-        $services = [
-        ['name'=>'Self Service','desc'=>'Cuci pakaian sendiri dengan mesin modern.','price'=>'Mulai dari Rp.10,000','img'=>'layanan-1.jpg'],
-        ['name'=>'Cuci Lipat','desc'=>'Dicuci bersih dan dilipat rapi.','price'=>'Mulai dari Rp.4,000/Kg','img'=>'layanan-2.jpg'],
-        ['name'=>'Cuci Setrika','desc'=>'Bersih, wangi, dan bebas kusut.','price'=>'Mulai dari Rp.6,000/Kg','img'=>'layanan-3.jpg'],
-        ['name'=>'Antar Jemput','desc'=>'Jemput & antar cucian ke rumah.','price'=>'Mulai dari Rp.5,000','img'=>'layanan-4.jpg'],
-        ];
-        @endphp
 
-        @foreach ($services as $s)
+        <!-- Self Service -->
         <div class="bg-white rounded-2xl shadow hover:shadow-lg transition p-6">
-          <div class="w-full h-28 rounded-lg bg-gray-200 overflow-hidden">
-            <img src="{{ asset('images/'.$s['img']) }}" alt="{{ $s['name'] }}"
+          <div class="relative w-full rounded-lg overflow-hidden aspect-[16/9]">
+            <img src="{{ asset('images/layanan-1.jpg') }}" alt="Self Service"
               class="w-full h-full object-cover"
               onerror="this.style.display='none'">
           </div>
-          <h3 class="mt-4 font-semibold text-lg">{{ $s['name'] }}</h3>
-          <p class="text-sm text-gray-600 mt-1">{{ $s['desc'] }}</p>
-          <p class="text-[#084cac] font-semibold mt-2">{{ $s['price'] }}</p>
+          <h3 class="mt-4 font-semibold text-lg">Self Service</h3>
+          <p class="text-sm text-gray-600 mt-1">Cuci pakaian sendiri dengan mesin modern.</p>
+          <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.10,000</p>
         </div>
-        @endforeach
-      </div>
 
-      <div class="mt-8 text-center">
-        <a href="{{ route('services', false) ?: '#' }}"
-          class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-[#084cac] text-[#084cac] hover:bg-[#f0f4ff]">
-          Info Layanan & Harga
-        </a>
+        <!-- Cuci Lipat -->
+        <div class="bg-white rounded-2xl shadow hover:shadow-lg transition p-6">
+          <div class="relative w-full rounded-lg overflow-hidden aspect-[16/9]">
+            <img src="{{ asset('images/layanan-2.jpg') }}" alt="Cuci Lipat"
+              class="w-full h-full object-cover"
+              onerror="this.style.display='none'">
+          </div>
+          <h3 class="mt-4 font-semibold text-lg">Cuci Lipat</h3>
+          <p class="text-sm text-gray-600 mt-1">Dicuci bersih dan dilipat rapi.</p>
+          <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.4,000/Kg</p>
+        </div>
+
+        <!-- Cuci Setrika -->
+        <div class="bg-white rounded-2xl shadow hover:shadow-lg transition p-6">
+          <div class="relative w-full rounded-lg overflow-hidden aspect-[16/9]">
+            <img src="{{ asset('images/layanan-3.jpg') }}" alt="Cuci Setrika"
+              class="w-full h-full object-cover"
+              onerror="this.style.display='none'">
+          </div>
+          <h3 class="mt-4 font-semibold text-lg">Cuci Setrika</h3>
+          <p class="text-sm text-gray-600 mt-1">Bersih, wangi, dan bebas kusut.</p>
+          <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.6,000/Kg</p>
+        </div>
+
+        <!-- Antar Jemput -->
+        <div class="bg-white rounded-2xl shadow hover:shadow-lg transition p-6">
+          <div class="relative w-full rounded-lg overflow-hidden aspect-[16/9]">
+            <img src="{{ asset('images/layanan-4.jpg') }}" alt="Antar Jemput"
+              class="w-full h-full object-cover"
+              onerror="this.style.display='none'">
+          </div>
+          <h3 class="mt-4 font-semibold text-lg">Antar Jemput</h3>
+          <p class="text-sm text-gray-600 mt-1">Jemput & antar cucian ke rumah.</p>
+          <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.5,000</p>
+        </div>
+
       </div>
     </section>
+    <div class="mt-8 text-center">
+      <a href="{{ route('services', false) ?: '#' }}"
+        class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-[#084cac] text-[#084cac] hover:bg-[#f0f4ff]">
+        Info Layanan & Harga
+      </a>
+    </div>
+  </section>
 
-<!-- TENTANG KAMI (Polished) -->
-<section id="tentang" class="scroll-mt-16 md:scroll-mt-20">
-  <div class="max-w-7xl mx-auto px-4 py-16">
-    <!-- Card wrapper with soft gradient background -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#CDE6EE] to-white ring-1 ring-black/5 shadow-sm">
-      <!-- Decorative background elements -->
-      <div class="pointer-events-none absolute -top-24 -right-20 h-72 w-72 rounded-full bg-white/40 blur-3xl"></div>
-      <div class="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-[#84c5de]/20 blur-3xl"></div>
+  <!-- TENTANG KAMI (Tanpa Box Kontak) -->
+  <section id="tentang" class="scroll-mt-16 md:scroll-mt-20">
+    <div class="max-w-7xl mx-auto px-4 py-16">
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#CDE6EE] to-white ring-1 ring-black/5 shadow-sm">
+        <div class="pointer-events-none absolute -top-24 -right-20 h-72 w-72 rounded-full bg-white/40 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-[#84c5de]/20 blur-3xl"></div>
 
-      <div class="relative p-6 md:p-10">
-        <h2 class="text-2xl md:text-3xl font-bold text-center tracking-tight text-gray-900">Tentang Kami</h2>
-        <p class="mt-2 text-center text-gray-600 max-w-2xl mx-auto">
-          Laundry cepat, bersih, dan wangi dengan layanan ramah—siap jemput dan antar ke rumah Anda.
-        </p>
+        <div class="relative p-6 md:p-10">
+          <h2 class="text-2xl md:text-3xl font-bold text-center tracking-tight text-gray-900">Tentang Kami</h2>
+          <p class="mt-2 text-center text-gray-600 max-w-2xl mx-auto">
+            Laundry cepat, bersih, dan wangi dengan layanan ramah—siap jemput dan antar ke rumah Anda.
+          </p>
 
-        <div class="mt-10 grid md:grid-cols-2 gap-10 items-center">
-          <!-- Kolom kiri (logo/gambar) -->
-          <div class="flex justify-center">
-            <div class="relative w-64 md:w-80 lg:w-96">
-              <img src="{{ asset('images/logo.png') }}"
-                   alt="Logo Qxpress Laundry"
-                   class="max-w-[85%] max-h-[85%] object-contain transition-transform duration-300 hover:scale-[1.03]"
-                   onerror="this.style.display='none'">
-              <!-- subtle corner accent -->
-              <div class="pointer-events-none absolute bottom-0 right-0 w-24 h-24 bg-[#084cac]/10 blur-2xl"></div>
-            </div>
-          </div>
-
-          <!-- Kolom kanan (teks) -->
-          <div>
-            <h3 class="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">Qxpress Laundry</h3>
-            <p class="mt-3 text-gray-700">Kami berkomitmen menghadirkan pengalaman laundry yang mulus: harga jelas, proses rapi, dan hasil memuaskan.</p>
-
-            <!-- Keunggulan -->
-            <div class="mt-6">
-              <h4 class="font-semibold text-gray-900 mb-4">Keunggulan</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <!-- item -->
-                <div class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span class="text-sm md:text-base text-gray-800">Layanan antar jemput</span>
-                </div>
-                <div class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span class="text-sm md:text-base text-gray-800">Proses cepat & tepat waktu</span>
-                </div>
-                <div class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span class="text-sm md:text-base text-gray-800">Cuci setrika bersih & wangi</span>
-                </div>
-                <div class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span class="text-sm md:text-base text-gray-800">Harga terjangkau</span>
-                </div>
+          <div class="mt-10 grid md:grid-cols-2 gap-10 items-center">
+            <!-- Kolom kiri (logo) -->
+            <div class="flex justify-center">
+              <div class="relative w-72 md:w-96 lg:w-[420px]"> <!-- ukuran logo diperbesar -->
+                <img src="{{ asset('images/logo.png') }}"
+                    alt="Logo Qxpress Laundry"
+                    class="w-full h-auto object-contain transition-transform duration-300 hover:scale-[1.03]"
+                    onerror="this.style.display='none'">
+                <div class="pointer-events-none absolute bottom-0 right-0 w-24 h-24 bg-[#084cac]/10 blur-2xl"></div>
               </div>
             </div>
 
-            <!-- Info Kontak -->
-            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-800 text-sm md:text-base">
-              <div class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3">
+            <!-- Kolom kanan (teks) -->
+            <div>
+              <h3 class="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">Qxpress Laundry</h3>
+              <p class="mt-3 text-gray-700">
+                Kami berkomitmen menghadirkan pengalaman laundry yang mulus: harga jelas, proses rapi, dan hasil memuaskan.
+              </p>
+
+              <!-- Keunggulan -->
+              <div class="mt-6">
+                <h4 class="font-semibold text-gray-900 mb-4">Keunggulan</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="flex items-center gap-3 p-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm md:text-base text-gray-800">Layanan antar jemput</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm md:text-base text-gray-800">Proses cepat & tepat waktu</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm md:text-base text-gray-800">Cuci setrika bersih & wangi</span>
+                  </div>
+                  <div class="flex items-center gap-3 p-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm md:text-base text-gray-800">Harga terjangkau</span>
+                  </div>
+                </div>
+              </div>
+
+            <!-- Info Kontak (3 baris vertikal, tanpa box & tanpa hyperlink) -->
+            <div class="mt-6 space-y-2 text-gray-800 text-sm md:text-base">
+              <!-- Jam buka -->
+              <div class="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#084cac]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span><strong>Buka:</strong> 06.00 – 22.00 WIB (Setiap hari)</span>
               </div>
-              <a href="tel:+6281373820217" class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3 hover:bg-white transition">
+
+              <!-- Telepon -->
+              <div class="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#084cac]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-.59 1.41l-1.12 1.12a16.02 16.02 0 006.36 6.36l1.12-1.12A2 2 0 0115 14h2a2 2 0 012 2v2a2 2 0 01-2 2h-1C9.37 20 4 14.63 4 8V7a2 2 0 012-2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.25 6.75A2.25 2.25 0 014.5 4.5h1.8a1.5 1.5 0 011.41 1.02l.7 2.1a1.5 1.5 0 01-.36 1.53L7 10.8a12.5 12.5 0 006.2 6.2l1.65-1.05a1.5 1.5 0 011.53-.36l2.1.7A1.5 1.5 0 0120 18.7v1.8a2.25 2.25 0 01-2.25 2.25c-8.1 0-14.25-6.15-14.25-14.25z" />
                 </svg>
                 <span><strong>0813-7382-0217</strong></span>
-              </a>
-              <a href="https://wa.me/6281373820217" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3 hover:bg-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="h-5 w-5" aria-hidden="true"><path fill="currentColor" d="M19.11 17.48a7.72 7.72 0 0 1-3.71-3.71c-.2-.4-.06-.9.31-1.11l1-.63a1 1 0 0 0 .48-.85l-.05-1.76a1 1 0 0 0-1-1l-1.62.07a2.65 2.65 0 0 0-2.47 2.47c-.11 2.6.89 5.09 2.82 7s4.39 2.93 7 2.82a2.65 2.65 0 0 0 2.47-2.47l.07-1.62a1 1 0 0 0-1-1l-1.76.05a1 1 0 0 0-.85.48l-.63 1c-.21.37-.71.51-1.11.31Z"/></svg>
-                <span>Chat WhatsApp</span>
-              </a>
-              <a href="https://maps.google.com/?q=Jl.+Airan+Raya+No.139,+Way+Hui,+Jati+Agung,+Lampung+Selatan" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-xl bg-white/70 ring-1 ring-black/5 p-3 hover:bg-white transition">
+              </div>
+
+              <!-- Alamat -->
+              <div class="flex items-start gap-2">
+                <!-- Map pin baru yang lebih rapi -->
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#084cac]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.656 0 3-1.344 3-3S13.656 5 12 5s-3 1.344-3 3 1.344 3 3 3zm0 0c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 21s-7.5-4.5-7.5-10.5a7.5 7.5 0 1115 0C19.5 16.5 12 21 12 21z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span><strong>Jl. Airan Raya No.139</strong>, Way Hui, Jati Agung, Lampung Selatan</span>
-              </a>
+              </div>
             </div>
 
-            <!-- CTA buttons -->
-            <div class="mt-6 flex flex-wrap gap-3">
-              <a href="https://wa.me/6281373820217?text=Halo%20Qxpress%20Laundry%2C%20mau%20jemput%20cucian%20ya" target="_blank" rel="noopener"
-                 class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-white bg-[#084cac] shadow hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#084cac]/60">
-                Pesan Antar-Jemput
-              </a>
-              <a href="https://maps.app.goo.gl/wZTuH7kCyBtoT3P68" target="_blank" rel="noopener"
-                 class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-[#084cac] bg-white/70 ring-1 ring-black/5 hover:bg-white shadow">
-                Lihat Peta
-              </a>
-              <a href="{{ route('tracking', false) ?: '#' }}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-[#084cac] bg-white/70 ring-1 ring-black/5 hover:bg-white shadow">
-                Lacak Pesanan
-              </a>
+              <!-- CTA Buttons -->
+              <div class="mt-6 flex flex-wrap gap-3">
+                <a href="https://wa.me/6281373820217?text=Halo%20Qxpress%20Laundry%2C%20mau%20jemput%20cucian%20ya"
+                  class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-white bg-[#084cac] shadow hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#084cac]/60">
+                  Pesan Antar-Jemput
+                </a>
+                <a href="https://maps.app.goo.gl/wZTuH7kCyBtoT3P68"
+                  class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-[#084cac] bg-white/70 ring-1 ring-black/5 hover:bg-white shadow">
+                  Lihat Peta
+                </a>
+                <a href="{{ route('tracking', false) ?: '#' }}"
+                  class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-[#084cac] bg-white/70 ring-1 ring-black/5 hover:bg-white shadow">
+                  Lacak Pesanan
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
     </div>
-  </div>
-</section>
-
+  </section>
 
     <!-- CTA AKHIR -->
     <section id="pesan" class="scroll-mt-16 md:scroll-mt-20 max-w-7xl mx-auto px-4 py-16">

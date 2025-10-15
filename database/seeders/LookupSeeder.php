@@ -38,6 +38,8 @@ class LookupSeeder extends Seeder
             ['nama_service' => 'Plastik Asoy',                     'harga_service' => 2000,  'created_at' => $now, 'updated_at' => $now],
             ['nama_service' => 'Antar Jemput (<=5KM)',             'harga_service' => 5000,  'created_at' => $now, 'updated_at' => $now],
             ['nama_service' => 'Antar Jemput (>5KM)',              'harga_service' => 10000, 'created_at' => $now, 'updated_at' => $now],
+            ['nama_service' => 'Boneka Kecil',                     'harga_service' => 10000, 'created_at' => $now, 'updated_at' => $now],
+            ['nama_service' => 'Boneka Besar',                     'harga_service' => 20000, 'created_at' => $now, 'updated_at' => $now]
         ];
 
         $metodePembayaran = [
@@ -58,29 +60,12 @@ class LookupSeeder extends Seeder
             ],
         ];
 
-        $infoLaundry = [
-            [
-                'nama_service' => 'Cuci Lipat Reguler (/Kg)',
-                'harga_service' => 4000,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'nama_service' => 'Cuci Setrika Reguler (/Kg)',
-                'harga_service' => 6000,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-        ];
 
         // Metode Pembayaran
         MetodePembayaran::insert($metodePembayaran);
 
         // Master Service (sample)
         Service::insert($service);
-
-        // Informasi Laundry untuk landing (boleh sama dengan service)
-        InformasiLaundry::insert($infoLaundry);
 
         // Saldo Kas (single row)
         SaldoKas::firstOrCreate(['id'=>1], ['saldo_kas'=>0]);

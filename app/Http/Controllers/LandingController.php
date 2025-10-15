@@ -48,6 +48,9 @@ class LandingController extends Controller
         'Antar Jemput' => [
             '/antar|jemput|pickup|delivery/i',
         ],
+        'Add-on'=> [
+            '/deterjen|pewangi|proclin|plastik|fee/i'
+        ]
     ];
 
     $grouped = $items->groupBy(function ($i) use ($rules) {
@@ -60,7 +63,7 @@ class LandingController extends Controller
             }
             if ($ok) return $label;
         }
-        return 'Add-on';
+        return 'Lainnya';
     });
 
     // urutkan sesuai lofi
@@ -73,6 +76,7 @@ class LandingController extends Controller
         'Hordeng',
         'Antar Jemput',
         'Add-on',
+        'Lainnya'
     ];
 
     $grouped = collect($order)

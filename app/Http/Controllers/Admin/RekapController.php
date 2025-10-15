@@ -48,7 +48,7 @@ class RekapController extends Controller
             ->with(['service', 'metode'])
             ->groupBy('service_id', 'metode_pembayaran_id')
             ->orderByDesc('max_created_at')
-            ->paginate(10, ['*'], 'omset');
+            ->paginate(20, ['*'], 'omset');
 
         // === PENGELUARAN (rekap tanpa service_id) ===
         $pengeluaran = Rekap::with('metode')
@@ -306,28 +306,59 @@ class RekapController extends Controller
     // input baris rekap omzet/pengeluaran sekali submit
     public function store(Request $r)
     {
-        $r->validate([
-            'rows'   => 'required|array|min:1',
-            'rows.*.service_id' => 'nullable|exists:services,id',
-            'rows.*.metode_pembayaran_id' => 'nullable|exists:metode_pembayaran,id',
-            'rows.*.qty' => 'required|integer|min:1',
-            'rows.*.subtotal' => 'required|integer',
-            'rows.*.total' => 'required|integer',
-        ]);
+        try {
+            $rawRows = $r->input('rows', []);
 
-        DB::transaction(function () use ($r) {
-            foreach ($r->rows as $row) {
-                Rekap::create([
-                    'service_id'            => $row['service_id'] ?? null,
-                    'metode_pembayaran_id'  => $row['metode_pembayaran_id'] ?? null,
-                    'qty'                   => $row['qty'],
-                    'subtotal'              => $row['subtotal'],   // harga satuan dari Services
-                    'total'                 => $row['total'],      // qty * harga satuan
-                ]);
+            // 1) Normalisasi & filter baris valid
+            $rows = [];
+            foreach ($rawRows as $row) {
+                $serviceId = $row['service_id'] ?? null;
+                $metodeId  = $row['metode_pembayaran_id'] ?? null;
+                $qty       = (int)($row['qty'] ?? 0);
+                $subtotal  = (int)($row['subtotal'] ?? 0);
+                $total     = (int)($row['total'] ?? 0);
+
+                // Anggap "kosong" jika belum pilih layanan ATAU qty/total/subtotal 0
+                if (!$serviceId || $qty <= 0 || $subtotal <= 0 || $total <= 0) {
+                    continue;
+                }
+
+                $rows[] = compact('serviceId','metodeId','qty','subtotal','total');
             }
-        });
 
-        return back()->with('ok', 'Rekap disimpan.');
+            // 2) Tidak ada baris valid? batal
+            if (count($rows) === 0) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['rows' => 'Tidak ada baris omzet yang valid. Pilih layanan dan isi jumlah/harga.'], 'omzet');
+            }
+
+            // 3) Validasi ringkas (pastikan id ada di DB)
+            $r->validate([
+                'rows.*.service_id'           => ['nullable','exists:services,id'],
+                'rows.*.metode_pembayaran_id' => ['nullable','exists:metode_pembayaran,id'],
+            ]);
+
+            // 4) Simpan dalam transaksi
+            DB::transaction(function () use ($rows) {
+                foreach ($rows as $row) {
+                    Rekap::create([
+                        'service_id'            => $row['serviceId'],
+                        'metode_pembayaran_id'  => $row['metodeId'],
+                        'qty'                   => $row['qty'],
+                        'subtotal'              => $row['subtotal'],
+                        'total'                 => $row['total'],
+                    ]);
+                }
+            });
+
+            return back()->with('ok', 'Rekap omzet berhasil disimpan.');
+        } catch (\Throwable $e) {
+            Log::error('[Rekap.store] gagal', ['msg'=>$e->getMessage()]);
+            return back()
+                ->withInput()
+                ->withErrors(['store' => 'Terjadi kesalahan saat menyimpan rekap omzet. Coba lagi.'], 'omzet');
+        }
     }
 
     public function input()
@@ -377,7 +408,7 @@ class RekapController extends Controller
             // Kembalikan pesan generic ke user
             return back()
                 ->withInput()
-                ->withErrors(['storeSaldo' => 'Terjadi kesalahan saat menyimpan saldo. Silakan coba lagi.']);
+                ->withErrors(['storeSaldo' => 'Terjadi kesalahan saat menyimpan saldo. Silakan coba lagi.'], 'saldo');
         }
     }
 
@@ -403,33 +434,63 @@ class RekapController extends Controller
 
     public function storePengeluaran(Request $r)
     {
-        $r->validate([
-            'outs'                        => ['required', 'array', 'min:1'],
-            'outs.*.keterangan'           => ['nullable', 'string', 'max:255'],
-            'outs.*.subtotal'             => ['required', 'integer', 'min:0'],
-            'outs.*.tanggal'              => ['nullable', 'date'],
-            'outs.*.metode_pembayaran_id' => ['nullable', 'exists:metode_pembayaran,id'],
-        ]);
-
-        DB::transaction(function () use ($r) {
-            foreach ($r->outs as $row) {
-                Rekap::create([
-                    'service_id'            => null, // pengeluaran = tanpa service
-                    'metode_pembayaran_id'  => $row['metode_pembayaran_id'] ?? null,
-                    'qty'                   => 1,
-                    'subtotal'              => (int) $row['subtotal'],
-                    'total'                 => (int) $row['subtotal'],
-                    'keterangan'            => $row['keterangan'] ?? null,
-                    // opsional: pakai tanggal dari form sebagai created_at
-                    'created_at'            => filled($row['tanggal'] ?? null)
-                        ? \Carbon\Carbon::parse($row['tanggal'])->endOfDay()
-                        : now(),
-                ]);
+        try {
+            $raw = $r->input('outs', []);
+    
+            // 1) Normalisasi & filter: baris valid = ada nominal > 0 (keterangan/metode opsional)
+            $rows = [];
+            foreach ($raw as $row) {
+                $ket     = trim((string)($row['keterangan'] ?? ''));
+                $subtotal= (int)($row['subtotal'] ?? 0);
+                $tanggal = $row['tanggal'] ?? null;
+                $metode  = $row['metode_pembayaran_id'] ?? null;
+    
+                if ($subtotal <= 0) continue; // kosong → skip
+    
+                $rows[] = [
+                    'keterangan' => $ket,
+                    'subtotal'   => $subtotal,
+                    'tanggal'    => $tanggal,
+                    'metode'     => $metode,
+                ];
             }
-        });
-
-        return back()->with('ok', 'Pengeluaran berhasil disimpan.');
-    }
+    
+            if (count($rows) === 0) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['outs' => 'Tidak ada baris pengeluaran yang valid. Isi nominal (> 0).'], 'pengeluaran');
+            }
+    
+            // 2) Validasi id metode (jika diisi)
+            $r->validate([
+                'outs.*.metode_pembayaran_id' => ['nullable','exists:metode_pembayaran,id'],
+            ]);
+    
+            // 3) Simpan transaksi
+            DB::transaction(function () use ($rows) {
+                foreach ($rows as $row) {
+                    Rekap::create([
+                        'service_id'            => null,
+                        'metode_pembayaran_id'  => $row['metode'] ?: null,
+                        'qty'                   => 1,
+                        'subtotal'              => $row['subtotal'],
+                        'total'                 => $row['subtotal'],
+                        'keterangan'            => $row['keterangan'] ?: null,
+                        'created_at'            => filled($row['tanggal'])
+                            ? \Carbon\Carbon::parse($row['tanggal'])->endOfDay()
+                            : now(),
+                    ]);
+                }
+            });
+    
+            return back()->with('ok', 'Pengeluaran berhasil disimpan.');
+        } catch (\Throwable $e) {
+            Log::error('[Rekap.storePengeluaran] gagal', ['msg'=>$e->getMessage()]);
+            return back()
+                ->withInput()
+                ->withErrors(['storePengeluaran' => 'Terjadi kesalahan saat menyimpan pengeluaran. Coba lagi.'], 'pengeluaran');
+        }
+    }    
 
     public function updateBonMetode(Request $r, PesananLaundry $pesanan)
     {

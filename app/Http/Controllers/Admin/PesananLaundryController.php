@@ -64,8 +64,7 @@ class PesananLaundryController extends Controller
             $harga = (int) Service::whereKey($pesanan->service_id)->value('harga_service');
 
             Rekap::create([
-                // Jika kamu menambah kolom 'pesanan_laundry_id' di tabel rekap, buka komentar di bawah:
-                // 'pesanan_laundry_id'   => $pesanan->id,
+                'pesanan_laundry_id'   => $pesanan->id,
                 'service_id'           => $pesanan->service_id,
                 'metode_pembayaran_id' => $pesanan->metode_pembayaran_id,
                 'qty'                  => $pesanan->qty,

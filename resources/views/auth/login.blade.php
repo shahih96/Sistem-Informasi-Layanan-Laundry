@@ -65,13 +65,6 @@
             @endif
           </div>
 
-          <div class="flex justify-center mt-4">
-            <a href="{{ Route::has('password.request') ? route('password.request') : '#' }}"
-               class="px-6 py-2 rounded bg-gray-300 hover:bg-gray-400 transition text-sm inline-block">
-              Reset Password
-            </a>
-          </div>
-
           <div class="flex justify-end mt-6">
             <button type="submit" class="px-6 py-3 rounded-lg bg-gray-900 text-white hover:brightness-110">
               Log in
