@@ -142,63 +142,79 @@
                   <tr class="text-left text-sm">
                     <th class="px-6 py-3 font-semibold text-gray-900">Nama</th>
                     <th class="px-6 py-3 font-semibold text-gray-900">Layanan</th>
+                    <th class="px-6 py-3 font-semibold text-gray-900 text-left">Status</th>
                     <th class="px-6 py-3 font-semibold text-gray-900 text-center">Qty</th>
                     <th class="px-6 py-3 font-semibold text-gray-900 text-center">Total</th>
                     <th class="px-6 py-3 font-semibold text-gray-900 text-center">Pembayaran</th>
                     <th class="px-6 py-3 font-semibold text-gray-900">Waktu Masuk</th>
-                    <th class="px-6 py-3 font-semibold text-gray-900">Status</th>
                     <th class="px-6 py-3 font-semibold text-gray-900">Update Terakhir</th>
                   </tr>
                 </thead>
 
                 <tbody class="divide-y divide-gray-100 text-sm">
-                  @foreach($items as $row)
-                    @php
-                      $qty   = max(1, (int)($row->qty ?? 1));
-                      $harga = (int) optional($row->service)->harga_service;
-                      $total = $qty * $harga;
+                @foreach($items as $row)
+                  @php
+                    $qty   = max(1, (int)($row->qty ?? 1));
+                    $harga = (int) optional($row->service)->harga_service;
+                    $total = $qty * $harga;
 
-                      $statusText = $row->latestStatusLog?->status?->nama_status
-                                    ?? $row->latestStatusLog?->keterangan
-                                    ?? '-';
+                    $statusText = $row->latestStatusLog?->status?->nama_status
+                                  ?? $row->latestStatusLog?->keterangan
+                                  ?? '-';
 
-                      $updatedAt = $row->latestStatusLog?->updated_at
-                                   ?? $row->latestStatusLog?->created_at
-                                   ?? null;
-                    @endphp
-                    <tr>
-                      <td class="px-6 py-4">
-                        <div class="font-medium text-gray-900">{{ $row->nama_pel ?? '-' }}</div>
-                        <div class="text-xs text-gray-500">{{ $row->no_hp_pel ?? '-' }}</div>
-                      </td>
+                    // Selesai? -> badge biru, selain itu merah
+                    $isSelesai = \Illuminate\Support\Str::of($statusText)->lower()->contains('selesai');
 
-                      <td class="px-6 py-4">{{ optional($row->service)->nama_service ?? '-' }}</td>
+                    $updatedAt = $row->latestStatusLog?->updated_at
+                                ?? $row->latestStatusLog?->created_at
+                                ?? null;
 
-                      <td class="px-6 py-4 text-center">{{ $qty }}</td>
+                    $metodeNow = strtolower($row->metode->nama ?? 'bon'); // default bon
+                  @endphp
+                  <tr>
+                    {{-- Nama (dengan No HP di bawah) --}}
+                    <td class="px-6 py-4">
+                      <div class="font-medium text-gray-900">{{ $row->nama_pel ?? '-' }}</div>
+                      <div class="text-xs text-gray-500">{{ $row->no_hp_pel ?? '-' }}</div>
+                    </td>
 
-                      <td class="px-6 py-4 text-right">Rp {{ number_format($total,0,',','.') }}</td>
+                    {{-- Layanan --}}
+                    <td class="px-6 py-4">{{ optional($row->service)->nama_service ?? '-' }}</td>
 
-                      <td class="px-6 py-4 text-center">
-                        @php
-                          // ambil dari relasi metode yang sudah di-with di controller
-                          $metodeNow = strtolower($row->metode->nama ?? 'bon'); // default bon jika null
-                        @endphp
+                    {{-- Status (badge biru/merah) --}}
+                    <td class="px-6 py-4">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs border
+                        {{ $isSelesai ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200' }}">
+                        {{ $statusText }}
+                      </span>
+                    </td>
 
-                        @if($metodeNow === 'bon')
-                          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">
-                            Belum Lunas
-                          </span>
-                        @else
-                          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
-                            Lunas
-                          </span>
-                        @endif
-                      </td>
-                      <td class="px-6 py-4">{{ $row->created_at?->translatedFormat('d M Y, H:i') ?? '-' }}</td>
-                      <td class="px-6 py-4">{{ $statusText }}</td>
-                      <td class="px-6 py-4">{{ $updatedAt?->translatedFormat('d M Y, H:i') ?? '-' }}</td>
-                    </tr>
-                  @endforeach
+                    {{-- Qty --}}
+                    <td class="px-6 py-4 text-center">{{ $qty }}</td>
+
+                    {{-- Total --}}
+                    <td class="px-6 py-4 text-right">Rp {{ number_format($total,0,',','.') }}</td>
+
+                    {{-- Pembayaran (badge hijau/kuning) --}}
+                    <td class="px-6 py-4 text-center">
+                      @if($metodeNow === 'bon')
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">
+                          Belum Lunas
+                        </span>
+                      @else
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-200">
+                          Lunas
+                        </span>
+                      @endif
+                    </td>
+
+                    {{-- Waktu Masuk --}}
+                    <td class="px-6 py-4">{{ $row->created_at?->translatedFormat('d M Y, H:i') ?? '-' }}</td>
+
+                    {{-- Update Terakhir --}}
+                    <td class="px-6 py-4">{{ $updatedAt?->translatedFormat('d M Y, H:i') ?? '-' }}</td>
+                  </tr>
+                @endforeach
                 </tbody>
               </table>
             </div>

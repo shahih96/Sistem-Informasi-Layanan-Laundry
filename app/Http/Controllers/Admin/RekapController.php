@@ -147,12 +147,15 @@ class RekapController extends Controller
 
         // Pesanan tunai yang belum pernah dicatat ke rekap (fallback), kumulatif
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
-            ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
-            ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->whereNull('rekap.id')
-            ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
-            ->where('pesanan_laundry.created_at', '<=', $end)
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+        ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
+        ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
+        ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
+        ->where('pesanan_laundry.created_at', '<=', $end)
+        ->where(function($q) use ($idTunai) {
+            $q->whereNull('rekap.id')                              
+              ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
+        })
+        ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
 
         // === FEE KUMULATIF s.d. $end (untuk mengurangi saldo kas akumulasi) ===
         $rowsToEnd = Rekap::with('service')
@@ -206,27 +209,27 @@ class RekapController extends Controller
         $bon = PesananLaundry::with(['service','metode'])
         ->where('created_at', '<=', $end)
         ->where(function ($q) use ($idBon, $idTunai, $idQris, $start, $end) {
-
-            // 1) AS-OF $end MASIH BON
-            //    - sekarang masih bon, atau
-            //    - sekarang sudah lunas, tapi pelunasannya terjadi SETELAH $end
+    
+            // 1) As-of $end MASIH BON
             $q->where(function ($qq) use ($idBon, $end) {
-                $qq->where('metode_pembayaran_id', $idBon)                   // masih bon saat ini
-                ->orWhere(function ($qqq) use ($idBon, $end) {            // sudah lunas sekarang,
-                    $qqq->where('metode_pembayaran_id', '<>', $idBon)     // tapi HARI PELUNASAN > $end
-                        ->where('updated_at', '>', $end);
-                });
+                $qq->where('metode_pembayaran_id', $idBon)                 // masih bon saat ini
+                    ->orWhere(function ($qqq) use ($idBon, $end) {          // sekarang sudah lunas,
+                        $qqq->where('metode_pembayaran_id', '<>', $idBon)   // tapi pelunasannya SETELAH $end
+                            ->where('updated_at', '>', $end);
+                    });
             })
-
-            // 2) DIBAYAR PADA TANGGAL YANG DILIAT ($start..$end)
-            //    Tampilkan juga baris ini (sebagai "muncul terakhir" di hari pelunasan)
+    
+            // 2) DIBAYAR PADA TANGGAL YANG DILIHAT ($start..$end)
+            //    TAPI pastikan pesanan SUDAH ADA sebelum hari ini
+            //    (kalau dibuat dan langsung tunai/qris hari ini, JANGAN tampil)
             ->orWhere(function ($qq) use ($idTunai, $idQris, $start, $end) {
-                $qq->whereBetween('updated_at', [$start, $end])
-                ->whereIn('metode_pembayaran_id', [$idTunai, $idQris]);
+                $qq->where('created_at', '<', $start)                
+                    ->whereBetween('updated_at', [$start, $end])  
+                    ->whereIn('metode_pembayaran_id', [$idTunai, $idQris]);
             });
         })
         ->latest('created_at')
-        ->paginate(10, ['*'], 'bon'); 
+        ->paginate(20, ['*'], 'bon');         
 
         // === KARTU TAP (menggunakan catatan terakhir sebelum hari terpilih) ===
         $CAP     = 5_000_000;  // saldo maksimum setelah isi ulang
@@ -499,19 +502,35 @@ class RekapController extends Controller
         ]);
     
         // map nama -> id
-        $map = MetodePembayaran::pluck('id', 'nama');
+        $map   = MetodePembayaran::pluck('id', 'nama');
         $newId = $map[$r->metode] ?? null;
-    
         if (!$newId) {
             return back()->withErrors(['metode' => 'Metode tidak valid.']);
         }
     
-        // ✅ Cukup update metode pembayaran di pesanan
-        $pesanan->update(['metode_pembayaran_id' => $newId]);
+        // Batas "hari ini" (menggunakan timezone app)
+        $todayStart = now()->startOfDay();
+        $todayEnd   = now()->endOfDay();
     
-        // ❌ Jangan ubah tabel rekap sama sekali di sini
-        return back()->with('ok', 'Metode pembayaran bon diperbarui.');
+        DB::transaction(function () use ($pesanan, $newId, $todayStart, $todayEnd) {
+            // 1) update metode di pesanan
+            $pesanan->update(['metode_pembayaran_id' => $newId]);
+    
+            // 2) Jika perubahan terjadi DI HARI YANG SAMA dengan created_at pesanan,
+            //    ikutkan sinkronisasi ke REKAP yang TER-LINK (buku kas hari ini boleh berubah).
+            if ($pesanan->created_at->between($todayStart, $todayEnd)) {
+                Rekap::where('pesanan_laundry_id', $pesanan->id)
+                    ->update(['metode_pembayaran_id' => $newId]);
+                // catatan: kalau baris rekap tidak ada karena alasan tertentu, update() = 0; aman.
+            }
+    
+            // 3) Jika perubahan terjadi di HARI BERBEDA, TIDAK menyentuh rekap lama.
+            //    Cash akan dihitung oleh fallback (pesanan kini TUNAI tapi rekap lama bukan tunai).
+        });
+    
+        return back()->with('ok', 'Metode pembayaran pesanan diperbarui.');
     }
+    
 
     private function sumKgLipatUntil($until): int
     {

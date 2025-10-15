@@ -117,15 +117,11 @@ class LandingController extends Controller
             // Siapkan varian pencarian (08xx... & +62xx...)
             $intl = '+62'.ltrim($local, '0');
     
-            $items = PesananLaundry::query()
-                ->with(['service', 'metode', 'latestStatusLog.status'])
-                ->where(function ($w) use ($local, $intl) {
-                    $w->where('no_hp_pel', 'like', "%{$local}%")
-                      ->orWhere('no_hp_pel', 'like', "%{$intl}%");
-                })
-                ->latest()
-                ->limit(50)
-                ->get();
+            $items = PesananLaundry::with(['service','metode','latestStatusLog.status'])
+            ->where('no_hp_pel', 'like', "%{$q}%")
+            ->where('is_hidden', false)   // ⬅️ baris ini penting
+            ->latest()
+            ->get();
     
         } elseif ($q !== '') {
             $error = 'Nomor HP yang Anda masukkan tidak valid.';

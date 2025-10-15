@@ -63,15 +63,17 @@ class PesananLaundryController extends Controller
             // 3) Buat rekap otomatis dari pesanan
             $harga = (int) Service::whereKey($pesanan->service_id)->value('harga_service');
 
-            Rekap::create([
-                'pesanan_laundry_id'   => $pesanan->id,
-                'service_id'           => $pesanan->service_id,
-                'metode_pembayaran_id' => $pesanan->metode_pembayaran_id,
-                'qty'                  => $pesanan->qty,
-                'subtotal'             => $harga,                        // harga satuan
-                'total'                => $harga * $pesanan->qty,        // qty * harga
-                'keterangan'           => 'Omset dari pesanan',
-            ]);
+            Rekap::firstOrCreate(
+                ['pesanan_laundry_id' => $pesanan->id],
+                [
+                    'service_id'           => $pesanan->service_id,
+                    'metode_pembayaran_id' => $pesanan->metode_pembayaran_id, // bisa bon/tunai/qris
+                    'qty'                  => $pesanan->qty,
+                    'subtotal'             => $harga,
+                    'total'                => $harga * $pesanan->qty,
+                    'keterangan'           => 'Omset dari pesanan',
+                ]
+            );
         });
 
         return back()->with('ok', 'Pesanan & rekap berhasil dibuat.');
@@ -98,7 +100,7 @@ class PesananLaundryController extends Controller
 
     public function destroy(PesananLaundry $pesanan)
     {
-        $pesanan->delete();
-        return back()->with('ok', 'Pesanan disembunyikan.');
-    }
+        $pesanan->update(['is_hidden' => true]);
+        return back()->with('ok', 'Pesanan disembunyikan dari halaman tracking.');
+    }    
 }

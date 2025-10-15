@@ -8,35 +8,55 @@
   <form method="POST" action="{{ route('admin.pesanan.store') }}" class="grid md:grid-cols-2 gap-4" x-data="pelangganPicker()">
     @csrf
     <!-- {{-- NAMA (dengan datalist) --}} -->
-    <div>
+    <div class="relative">
       <label class="text-sm">Nama Pelanggan</label>
       <input name="nama_pel"
             x-model="nama"
-            @change="onNamaPicked()"
-            list="pelanggan-nama-list"
+            @input="onNamaInput()"
+            @blur="hideSoon('nama')"
+            @focus="showList('nama')"
             autocomplete="off"
+            list="pelanggan-nama-list"
             class="mt-1 w-full border rounded px-3 py-2" required>
-      <datalist id="pelanggan-nama-list">
-        @foreach($pelangganOptions as $pl)
-          <option value="{{ $pl->nama_pel }}"></option>
-        @endforeach
-      </datalist>
+      <!-- Dropdown saran Nama -->
+      <div x-show="openNama && namaSaran.length"
+          class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+          @mousedown.prevent>
+        <template x-for="s in namaSaran" :key="s.key">
+          <button type="button"
+                  class="block w-full text-left px-3 py-2 hover:bg-gray-50"
+                  @click="applySuggestion(s)">
+            <div class="font-medium" x-text="s.nama"></div>
+            <div class="text-xs text-gray-500" x-text="s.hp"></div>
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- {{-- NO HP (dengan datalist) --}} -->
-    <div>
+    <div class="relative">
       <label class="text-sm">No. HP</label>
       <input name="no_hp_pel"
             x-model="hp"
-            @change="onHpPicked()"
-            list="pelanggan-hp-list"
+            @input="onHpInput()"
+            @blur="hideSoon('hp')"
+            @focus="showList('hp')"
             autocomplete="off"
+            list="pelanggan-hp-list"
             class="mt-1 w-full border rounded px-3 py-2" required>
-      <datalist id="pelanggan-hp-list">
-        @foreach($pelangganOptions as $pl)
-          <option value="{{ $pl->no_hp_pel }}"></option>
-        @endforeach
-      </datalist>
+      <!-- Dropdown saran HP -->
+      <div x-show="openHp && hpSaran.length"
+          class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+          @mousedown.prevent>
+        <template x-for="s in hpSaran" :key="s.key">
+          <button type="button"
+                  class="block w-full text-left px-3 py-2 hover:bg-gray-50"
+                  @click="applySuggestion(s)">
+            <div class="font-medium" x-text="s.hp"></div>
+            <div class="text-xs text-gray-500" x-text="s.nama"></div>
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- Pilih Layanan -->
@@ -87,71 +107,89 @@
   <div class="overflow-x-auto">
     <table class="min-w-full text-sm">
       <thead class="bg-gray-50">
+        {{-- HAPUS referensi $p di THEAD --}}
         <tr>
           <th class="px-3 py-2 text-left">Pelanggan</th>
           <th class="px-3 py-2 text-left">No HP</th>
           <th class="px-3 py-2 text-left">Layanan</th>
+          <th class="px-3 py-2 text-left">Status</th>
           <th class="px-3 py-2 text-center">Qty</th>
           <th class="px-3 py-2 text-right">Total</th>
-          <th class="px-3 py-2 text-center">Pembayaran</th> {{-- ditentukan dari metode --}}
-          <th class="px-3 py-2 text-left">Status</th>
+          <th class="px-3 py-2 text-center">Pembayaran</th>
           <th class="px-3 py-2 text-left">Update Terakhir</th>
           <th class="px-3 py-2"></th>
         </tr>
       </thead>
       <tbody>
-        @foreach($pesanan as $p)
-          @php
-            $qty     = max(1, (int)($p->qty ?? 1));
-            $harga   = (int)($p->service->harga_service ?? 0);
-            $total   = $qty * $harga;
-            $metode  = $p->metode->nama ?? null; // relasi ke metode_pembayaran
-            $isLunas = in_array($metode, ['tunai','qris']);
-          @endphp
-          <tr class="border-t">
-            <td class="px-3 py-2">{{ $p->nama_pel }}</td>
-            <td class="px-3 py-2">{{ $p->no_hp_pel }}</td>
-            <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
-
-            {{-- Qty --}}
-            <td class="px-3 py-2 text-center">{{ $qty }}</td>
-
-            {{-- Total = harga_service * qty --}}
-            <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
-
-            {{-- Status Pembayaran dari metode --}}
-            <td class="px-3 py-2 text-center">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
-                {{ $isLunas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200' }}">
-                {{ $isLunas ? 'Lunas' : 'Belum Lunas' }}
+      @foreach($pesanan as $p)
+        @php
+          $qty     = max(1, (int)($p->qty ?? 1));
+          $harga   = (int)($p->service->harga_service ?? 0);
+          $total   = $qty * $harga;
+          $metode  = $p->metode->nama ?? null; // relasi ke metode_pembayaran
+          $isLunas = in_array($metode, ['tunai','qris']);
+        @endphp
+        {{-- Tambahkan highlight row disini, di TBODY --}}
+        <tr class="border-t {{ $p->is_hidden ? 'bg-red-50/60' : '' }}">
+          {{-- Pelanggan, No HP, Layanan --}}
+          <td class="px-3 py-2">
+            {{ $p->nama_pel }}
+            @if($p->is_hidden)
+              <span class="ml-2 align-middle inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border bg-red-100 text-red-700 border-red-200">
+                Disembunyikan
               </span>
-            </td>
+            @endif
+          </td>
+          <td class="px-3 py-2">{{ $p->no_hp_pel }}</td>
+          <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
 
-            <td class="px-3 py-2">
-              <form method="POST" action="{{ route('admin.status.store') }}" class="flex items-center gap-2">
-                @csrf
-                <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
-                <select name="keterangan" class="border rounded px-2 py-1 text-xs">
-                  @php $ops = ['Diproses','Selesai']; @endphp
-                  @foreach($ops as $op)
-                    <option @selected(optional($p->statuses->first())->keterangan === $op)>{{ $op }}</option>
-                  @endforeach
-                </select>
-                <button class="text-xs px-2 py-1 rounded bg-gray-800 text-white">Ubah</button>
-              </form>
-            </td>
+          {{-- Status (Diproses/Selesai) --}}
+          <td class="px-3 py-2">
+            <form method="POST" action="{{ route('admin.status.store') }}" class="flex items-center gap-2">
+              @csrf
+              <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
+              <select name="keterangan" class="border rounded px-2 py-1 text-xs">
+                @php $ops = ['Diproses','Selesai']; @endphp
+                @foreach($ops as $op)
+                  <option @selected(optional($p->statuses->first())->keterangan === $op)>{{ $op }}</option>
+                @endforeach
+              </select>
+              <button class="text-xs px-2 py-1 rounded bg-gray-800 text-white">Ubah</button>
+            </form>
+          </td>
 
-            <td class="px-3 py-2">
-              {{ optional($p->statuses->first())->created_at?->format('d/m/y H:i') }}
-            </td>
-            <td class="px-3 py-2 text-right">
+          {{-- Qty --}}
+          <td class="px-3 py-2 text-center">{{ $qty }}</td>
+
+          {{-- Total --}}
+          <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
+
+          {{-- Pembayaran (Lunas/Belum Lunas) --}}
+          <td class="px-3 py-2 text-center">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
+              {{ $isLunas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200' }}">
+              {{ $isLunas ? 'Lunas' : 'Belum Lunas' }}
+            </span>
+          </td>
+
+          {{-- Update Terakhir --}}
+          <td class="px-3 py-2">
+            {{ optional($p->statuses->first())->created_at?->format('d/m/y H:i') }}
+          </td>
+
+          {{-- Aksi --}}
+          <td class="px-3 py-2 text-right">
+            @if(!$p->is_hidden)
               <form method="POST" action="{{ route('admin.pesanan.destroy',$p) }}">
                 @csrf @method('DELETE')
                 <button class="text-xs underline text-red-600">Sembunyikan</button>
               </form>
-            </td>
-          </tr>
-        @endforeach
+            @else
+              <span class="text-[11px] text-gray-500 italic">Tersembunyi</span>
+            @endif
+          </td>
+        </tr>
+      @endforeach
       </tbody>
     </table>
   </div>
@@ -159,34 +197,110 @@
 </div>
 
 <script>
-  // Map dari histori: nama -> hp, hp -> nama
-  const NAME_TO_HP = {
+  // Daftar pelanggan unik (nama+hp) dari DB
+  const CUSTOMERS = [
     @foreach($pelangganOptions as $pl)
-      {!! json_encode($pl->nama_pel) !!}: {!! json_encode($pl->no_hp_pel) !!},
+      { nama: {!! json_encode($pl->nama_pel) !!}, hp: {!! json_encode($pl->no_hp_pel) !!} },
     @endforeach
-  };
-  const HP_TO_NAME = {
-    @foreach($pelangganOptions as $pl)
-      {!! json_encode($pl->no_hp_pel) !!}: {!! json_encode($pl->nama_pel) !!},
-    @endforeach
-  };
+  ];
+
+  // Util
+  const norm = s => (s||'').toString().trim().toLowerCase();
+  const onlyDigits = s => (s||'').replace(/\D/g,'');
+  // Levenshtein sederhana (cukup untuk input pendek)
+  function lev(a,b){
+    a = norm(a); b = norm(b);
+    const m = a.length, n = b.length;
+    if(!m) return n; if(!n) return m;
+    const dp = Array.from({length:m+1}, (_,i)=>Array(n+1).fill(0));
+    for(let i=0;i<=m;i++) dp[i][0]=i;
+    for(let j=0;j<=n;j++) dp[0][j]=j;
+    for(let i=1;i<=m;i++){
+      for(let j=1;j<=n;j++){
+        const cost = a[i-1]===b[j-1] ? 0 : 1;
+        dp[i][j]=Math.min(
+          dp[i-1][j]+1,
+          dp[i][j-1]+1,
+          dp[i-1][j-1]+cost
+        );
+      }
+    }
+    return dp[m][n];
+  }
+
+  function rankByName(query){
+    const q = norm(query);
+    if(!q) return [];
+    return CUSTOMERS.map((c,i)=>{
+      const n = norm(c.nama);
+      const score =
+        (n.startsWith(q) ? 0 :
+         n.includes(q)   ? 1 :
+         lev(n,q)); // makin kecil makin mirip
+      return { key:i, ...c, score };
+    })
+    .filter(x => x.score <= 3 || x.score===0 || x.score===1)
+    .sort((a,b)=>a.score-b.score)
+    .slice(0,6);
+  }
+
+  function rankByHp(query){
+    const q = onlyDigits(query);
+    if(!q) return [];
+    return CUSTOMERS.map((c,i)=>{
+      const h = onlyDigits(c.hp);
+      const score =
+        (h.startsWith(q) ? 0 :
+         h.includes(q)   ? 1 :
+         lev(h,q));
+      return { key:i, ...c, score };
+    })
+    .filter(x => x.score <= 3 || x.score===0 || x.score===1)
+    .sort((a,b)=>a.score-b.score)
+    .slice(0,6);
+  }
 
   function pelangganPicker() {
     return {
+      // state
       nama: @json(old('nama_pel','')),
       hp:   @json(old('no_hp_pel','')),
-      onNamaPicked(){
-        // kalau nama dikenal & HP masih kosong, auto isi
-        if (this.nama && !this.hp && NAME_TO_HP[this.nama]) {
-          this.hp = NAME_TO_HP[this.nama];
-        }
+      openNama:false, openHp:false,
+      namaSaran:[], hpSaran:[],
+      hideTimer:null,
+
+      // dropdown control
+      showList(which){ if(which==='nama') this.openNama=true; else this.openHp=true; },
+      hideSoon(which){
+        // tunda dikit biar klik suggestion gak ketutup duluan
+        clearTimeout(this.hideTimer);
+        this.hideTimer = setTimeout(()=>{
+          if(which==='nama') this.openNama=false; else this.openHp=false;
+        }, 120);
       },
-      onHpPicked(){
-        // kalau HP dikenal & nama masih kosong, auto isi
-        if (this.hp && !this.nama && HP_TO_NAME[this.hp]) {
-          this.nama = HP_TO_NAME[this.hp];
-        }
-      }
+
+      // input handlers
+      onNamaInput(){
+        this.namaSaran = rankByName(this.nama);
+        this.openNama = !!this.namaSaran.length;
+        // auto isi HP kalau cocok 100% (score 0 dan startsWith)
+        const exact = CUSTOMERS.find(c => norm(c.nama)===norm(this.nama));
+        if(exact && !this.hp) this.hp = exact.hp;
+      },
+      onHpInput(){
+        this.hpSaran = rankByHp(this.hp);
+        this.openHp = !!this.hpSaran.length;
+        // auto isi Nama kalau nomor match penuh
+        const exact = CUSTOMERS.find(c => onlyDigits(c.hp)===onlyDigits(this.hp));
+        if(exact && !this.nama) this.nama = exact.nama;
+      },
+
+      // pakai suggestion
+      applySuggestion(s){
+        this.nama = s.nama;
+        this.hp   = s.hp;
+        this.openNama=false; this.openHp=false;
+      },
     }
   }
 </script>
