@@ -45,7 +45,7 @@ class DashboardController extends Controller
 
         // Riwayat terbaru (bebas tanggal)
         $riwayat = PesananLaundry::with(['service','statuses' => fn($q)=>$q->latest()])
-            ->latest()->take(10)->get();
+            ->latest()->take(5)->get();
 
         // ================= TOTAL CASH (AKUMULASI s.d. $end) =================
         $idTunai = MetodePembayaran::where('nama','tunai')->value('id');
@@ -60,15 +60,20 @@ class DashboardController extends Controller
             ->where('created_at', '<=', $end)
             ->sum('total');
 
+        // === FIX: samakan fallback dengan RekapController ===
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->whereNull('rekap.id')
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->where('pesanan_laundry.created_at', '<=', $end)
+            ->where('pesanan_laundry.updated_at', '<=', $end)
+            ->where(function($q) use ($idTunai) {
+                $q->whereNull('rekap.id')                              // belum pernah masuk rekap
+                ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai); // pernah masuk, tapi bukan tunai (mis. bon)
+            })
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
 
-        // Fee kumulatif s.d. $end
+        // Fee kumulatif s.d. $end (biarkan seperti sebelumnya)
         $rowsToEnd = Rekap::with('service')
             ->whereNotNull('service_id')
             ->where('created_at', '<=', $end)
