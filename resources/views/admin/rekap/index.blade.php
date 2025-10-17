@@ -3,20 +3,15 @@
 
 @section('content')
 
-<!-- Filter Tanggal -->
+<!-- {{-- Filter Tanggal --}} -->
 <div class="mb-4 flex flex-wrap items-center gap-2">
   <form method="GET" action="{{ route('admin.rekap.index') }}" class="flex items-center gap-2">
-    <div class="relative">
-      <input
-        type="date"
-        name="d"
-        value="{{ request('d', optional($day ?? now())->toDateString()) }}"
-        class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-      />
-      <!-- optional icon:
-      <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M3 11h18M5 19h14a2 2 0 002-2v-6H3v6a2 2 0 002 2z"/></svg>
-      -->
-    </div>
+    <input
+      type="date"
+      name="d"
+      value="{{ request('d', optional($day ?? now())->toDateString()) }}"
+      class="border rounded-lg px-3 py-2"
+    />
     <button class="px-4 py-2 rounded-lg bg-gray-800 text-white hover:brightness-110">
       Tampilkan
     </button>
@@ -25,17 +20,17 @@
 
 <div id="rekap-sheet" class="mt-2 p-2">
   <div class="text-sm text-gray-600 ml-auto pb-2">
-    Menampilkan rekap tanggal:
-    <strong>{{ \Carbon\Carbon::parse(request('d', optional($day ?? now())->toDateString()))->translatedFormat('l, d M Y') }}</strong>
-  </div>
+      Menampilkan rekap tanggal:
+      <strong>{{ \Carbon\Carbon::parse(request('d', optional($day ?? now())->toDateString()))->translatedFormat('l, d M Y') }}</strong>
+    </div>
 
-  <!-- Ringkasan Keuangan (atas) -->
+  <!-- {{-- Ringkasan Keuangan (atas) --}} -->
   <div class="grid md:grid-cols-4 gap-4 capture-desktop-4">
     <div class="bg-white p-5 rounded-xl shadow">
       <div class="text-sm opacity-70">Total Cash Laundry (Akumulasi)</div>
       <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalCash,0,',','.') }}</div>
       <div class="text-xs text-gray-500 mt-1">Saldo kemarin: Rp {{ number_format($saldoCashKemarin,0,',','.') }}</div>
-      <div class="text-xs text-gray-500 mt-1 space-y-0.5">
+      <div class="text-xs text-gray-500 mt-1">
         @if(($penjualanTunaiHariIni ?? 0) != 0)
           <div>+ Tunai hari ini: Rp {{ number_format($penjualanTunaiHariIni,0,',','.') }}</div>
         @endif
@@ -55,7 +50,7 @@
       <div class="text-sm opacity-70">Total Bon Pelanggan (Akumulasi)</div>
       <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalPiutang ?? 0,0,',','.') }}</div>
       <div class="text-xs text-gray-500 mt-1">Bon kemarin: Rp {{ number_format($bonKemarin,0,',','.') }}</div>
-      <div class="text-xs text-gray-500 mt-1 space-y-0.5">
+      <div class="text-xs text-gray-500 mt-1">
         @if(($bonMasukHariIni ?? 0) != 0)
           <div>+ Bon masuk hari ini: Rp {{ number_format($bonMasukHariIni,0,',','.') }}</div>
         @endif
@@ -73,19 +68,17 @@
         Setrika {{ $setrikaKgTotal }} Kg: Rp {{ number_format($feeSetrika,0,',','.') }})
       </div>
       <div class="text-[11px] text-gray-500 mt-1">
-        Sisa kg lipat yang dibawa ke besok:
-        <strong>{{ $sisaLipatBaru ?? 0 }} Kg</strong>
+      Sisa kg lipat yang dibawa ke besok:
+      <strong>{{ $sisaLipatBaru ?? 0 }} Kg</strong>
       </div>
     </div>
-
     <div class="bg-white p-5 rounded-xl shadow">
       <div class="text-sm opacity-70">Total Omset Bersih Hari Ini</div>
       <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalOmzetBersihHariIni,0,',','.') }}</div>
       <div class="text-xs text-gray-500 mt-1">(Kotor: Rp {{ number_format($totalOmzetKotorHariIni,0,',','.') }} − Fee: Rp {{ number_format($totalFee,0,',','.') }})</div>
-      <div class="text-xs text-gray-500 mt-1">Tunai: Rp {{ number_format($totalTunaiHariIni,0,',','.') }} • QRIS: Rp {{ number_format($totalQrisHariIni,0,',','.') }} • Bon: Rp {{ number_format($totalBonHariIni,0,',','.') }}</div>
+      <div class="text-xs text-gray-500 mt-1">Tunai: Rp {{ number_format($totalTunaiHariIni,0,',','.') }} • Qris: Rp {{ number_format($totalQrisHariIni,0,',','.') }} • Bon: Rp {{ number_format($totalBonHariIni,0,',','.') }}</div>
     </div>
   </div>
-
   <div class="mt-4 grid md:grid-cols-3 gap-4 capture-desktop-3">
     <div class="bg-white p-5 rounded-xl shadow">
       <div class="text-sm opacity-70">Sisa Saldo Kartu Hari Ini</div>
@@ -101,7 +94,7 @@
     </div>
   </div>
 
-  <!-- Tabel Omset -->
+  <!-- {{-- Tabel Omset --}} -->
   <div class="mt-8 bg-white p-5 rounded-xl shadow">
     <div class="font-semibold mb-3">Tabel Omset Hari Ini</div>
     <div class="overflow-x-auto">
@@ -117,9 +110,9 @@
             <th class="px-3 py-2 text-right">Aksi</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody>
           @foreach($omset as $i => $r)
-            <tr class="hover:bg-gray-50">
+            <tr class="border-t">
               <td class="px-3 py-2">{{ ($omset->currentPage()-1)*$omset->perPage() + $loop->iteration }}</td>
               <td class="px-3 py-2">{{ $r->service->nama_service ?? '-' }}</td>
               <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
@@ -133,6 +126,7 @@
                   @csrf @method('DELETE')
                   <input type="hidden" name="service_id" value="{{ $r->service_id }}">
                   <input type="hidden" name="metode_pembayaran_id" value="{{ $r->metode_pembayaran_id }}">
+                  {{-- Jika ingin batasi per tanggal, kirimkan juga hidden "tanggal" --}}
                   {{-- <input type="hidden" name="tanggal" value="{{ optional($r->created_at)->toDateString() }}"> --}}
                   <button class="text-xs underline text-red-600">Hapus</button>
                 </form>
@@ -145,7 +139,7 @@
     <div class="mt-2">{{ $omset->links('pagination::tailwind') }}</div>
   </div>
 
-  <!-- Tabel Pengeluaran -->
+  <!-- {{-- Tabel Pengeluaran --}} -->
   <div class="mt-8 bg-white p-5 rounded-xl shadow">
     <div class="font-semibold mb-3">Tabel Pengeluaran Hari Ini</div>
     <div class="overflow-x-auto">
@@ -159,14 +153,15 @@
             <th class="px-3 py-2 text-right">Aksi</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody>
           @foreach($pengeluaran as $i => $r)
-            <tr class="hover:bg-gray-50">
+            <tr class="border-t">
               <td class="px-3 py-2">{{ $pengeluaran->firstItem() + $i }}</td>
               <td class="px-3 py-2">
                 {{ $r->keterangan ?? '-' }}
 
                 @php
+                  // deteksi "owner draw" → hanya penanda visual
                   $isOwnerDraw = str($r->keterangan ?? '')->lower()->contains([
                     'bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas', 'tarik',
                   ]);
@@ -199,7 +194,7 @@
     <div class="mt-2">{{ $pengeluaran->links('pagination::tailwind') }}</div>
   </div>
 
-  <!-- Tabel Bon Pelanggan -->
+  <!-- {{-- Tabel Bon Pelanggan --}} -->
   <div class="mt-8 bg-white p-5 rounded-xl shadow">
     <div class="font-semibold mb-3">Tabel Bon Pelanggan</div>
     <div class="overflow-x-auto">
@@ -212,35 +207,33 @@
             <th class="px-3 py-2 text-center">Kuantitas</th>
             <th class="px-3 py-2 text-right">Total</th>
             <th class="px-3 py-2 text-center">Tanggal Masuk</th>
-            <th class="px-3 py-2 text-center">Metode</th>
+            <th class="px-3 py-2 text-center">Metode</th>   {{-- baru --}}
             <th class="px-3 py-2 text-center">Pembayaran</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody>
         @forelse($bon as $i => $p)
           @php
-            $asOfStart = ($day ?? now())->copy()->startOfDay();
-            $asOfEnd   = ($day ?? now())->copy()->endOfDay();
+          $asOfStart = ($day ?? now())->copy()->startOfDay();
+          $asOfEnd   = ($day ?? now())->copy()->endOfDay();
 
-            $qty   = max(1, (int)($p->qty ?? 1));
-            $harga = (int)($p->service->harga_service ?? 0);
-            $total = $qty * $harga;
+          $qty   = max(1, (int)($p->qty ?? 1));
+          $harga = (int)($p->service->harga_service ?? 0);
+          $total = $qty * $harga;
 
-            $metodeNow = strtolower($p->metode->nama ?? 'bon');
+          $metodeNow = strtolower($p->metode->nama ?? 'bon');
 
-            $isBonAsOfEnd = ($metodeNow === 'bon')
-                || (($metodeNow !== 'bon') && optional($p->updated_at)->gt($asOfEnd));
+          // MASIH BON per akhir hari terpilih jika:
+          // - sekarang masih bon, ATAU
+          // - sekarang sudah lunas tapi updated_at > asOfEnd (artinya pada tanggal yang dilihat masih bon)
+          $isBonAsOfEnd = ($metodeNow === 'bon')
+              || (($metodeNow !== 'bon') && optional($p->updated_at)->gt($asOfEnd));
 
-            $dibayarHariIni = ($metodeNow !== 'bon')
-                && optional($p->updated_at)->between($asOfStart, $asOfEnd);
-
-            $badgeClass = match ($metodeNow) {
-              'tunai' => 'bg-green-50 text-green-700 border border-green-200',
-              'qris'  => 'bg-indigo-50 text-indigo-700 border border-indigo-200',
-              default => 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-            };
+          // Baru dilunasi pada tanggal terpilih?
+          $dibayarHariIni = ($metodeNow !== 'bon')
+              && optional($p->updated_at)->between($asOfStart, $asOfEnd);
           @endphp
-          <tr class="hover:bg-gray-50">
+          <tr class="border-t">
             <td class="px-3 py-2">{{ ($bon->currentPage()-1)*$bon->perPage() + $loop->iteration }}</td>
 
             <td class="px-3 py-2">
@@ -253,46 +246,17 @@
             <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
             <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
 
-            {{-- Metode (dropdown custom, tidak nimpa) --}}
-            <td class="px-3 py-2 text-center relative"
-                x-data="{ open:false, sc:null }"
-                x-init="sc = $el.closest('.overflow-x-auto')"
-                x-effect="if(!open && sc){ sc.style.overflow='auto' }">
-              @php
-                $metodeNow = strtolower($p->metode->nama ?? 'bon');
-                $badgeClass = match ($metodeNow) {
-                  'tunai' => 'bg-green-50 text-green-700 border border-green-200',
-                  'qris'  => 'bg-indigo-50 text-indigo-700 border border-indigo-200',
-                  default => 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-                };
-              @endphp
-
-              <button type="button"
-                      @click="open=!open; if(open && sc){ sc.style.overflow='visible' }"
-                      class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs {{ $badgeClass }}">
-                {{ strtoupper($metodeNow) }}
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
-                </svg>
-              </button>
-
-              <div x-show="open"
-                  x-transition
-                  @click.outside="open=false; if(sc){ sc.style.overflow='auto' }"
-                  @keydown.escape.window="open=false; if(sc){ sc.style.overflow='auto' }"
-                  class="absolute z-50 mt-1 right-0 w-36 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                @foreach(['bon','tunai','qris'] as $opt)
-                  <form method="POST" action="{{ route('admin.rekap.update-bon', $p) }}">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="metode" value="{{ $opt }}">
-                    <button type="submit"
-                            class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 {{ $metodeNow===$opt ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                      {{ strtoupper($opt) }}
-                    </button>
-                  </form>
-                @endforeach
-              </div>
+            {{-- Metode (dropdown) --}}
+            <td class="px-3 py-2 text-center">
+              <form method="POST" action="{{ route('admin.rekap.update-bon', $p) }}">
+                @csrf
+                @method('PATCH')
+                <select name="metode" class="border rounded px-2 py-1 text-xs" onchange="this.form.submit()">
+                  <option value="bon"   {{ $metodeNow==='bon'   ? 'selected' : '' }}>Bon</option>
+                  <option value="tunai" {{ $metodeNow==='tunai' ? 'selected' : '' }}>Tunai</option>
+                  <option value="qris"  {{ $metodeNow==='qris'  ? 'selected' : '' }}>QRIS</option>
+                </select>
+              </form>
             </td>
 
             {{-- Pembayaran badge --}}
@@ -323,7 +287,7 @@
   </div>
 </div> <!-- end rekap-sheet -->
 
-<!-- Tombol Input Rekap + Download -->
+<!-- {{-- Tombol Input Rekap --}} -->
 <div class="mt-6 text-right">
   <a href="{{ route('admin.rekap.input') }}"
      class="inline-flex items-center gap-2 rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110">
@@ -337,7 +301,6 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
     </svg>
     Download JPG
-  </button>
 </div>
 
 <!-- html-to-image (CDN + fallback) -->
@@ -353,13 +316,17 @@
   });
 </script>
 
-<!-- Style khusus saat capture -->
+<!-- Style khusus saat capture (paksa tampilan desktop & hilangkan scroll)
+     >>> TIDAK mematikan shadow supaya kartu tetap “mengambang” seperti di layar <<< -->
 <style>
   /* aktif hanya saat root diberi .capture-mode */
   #rekap-sheet.capture-mode {
     background: #ffffff !important;
     padding: 16px;
   }
+
+  /* jangan sembunyikan shadow — biarkan seperti UI */
+  /* #rekap-sheet.capture-mode .shadow { box-shadow: none !important; }  <-- DIHAPUS */
 
   /* hilangkan overflow agar tabel tak terpotong */
   #rekap-sheet.capture-mode .overflow-x-auto,
@@ -382,11 +349,11 @@
 
 <script>
   (function () {
-    const btn  = document.getElementById('btn-download-jpg');
-    const root = document.getElementById('rekap-sheet');
+    const btn  = document.getElementById('btn-download-jpg'); // tombol
+    const root = document.getElementById('rekap-sheet');      // area yang di-capture
     if (!btn || !root) return;
 
-    const EXPORT_WIDTH = 1280;
+    const EXPORT_WIDTH = 1280; // render selebar desktop
 
     function toggleCapture(on) {
       if (on) {
@@ -406,16 +373,20 @@
           return;
         }
 
+        // 1) Aktifkan mode capture (paksa desktop & non-scroll)
         toggleCapture(true);
 
+        // 2) Paksa lebar desktop agar layout mengikuti desktop
         root.style.maxWidth = 'none';
         root.style.width    = EXPORT_WIDTH + 'px';
-        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => requestAnimationFrame(r)); // biar reflow dulu
 
+        // 3) Hitung tinggi penuh konten
         const w = root.scrollWidth;
         const h = root.scrollHeight;
         root.style.height = h + 'px';
 
+        // 4) Render ke JPG (pixelRatio dinaikkan supaya tajam)
         const dataUrl = await window.htmlToImage.toJpeg(root, {
           quality: 0.95,
           backgroundColor: '#ffffff',
@@ -424,6 +395,7 @@
           filter: (n) => !n.classList || !n.classList.contains('no-export'),
         });
 
+        // 5) Download
         const dateLabel = "{{ \Illuminate\Support\Str::of(request('d', optional($day ?? now())->toDateString()))->replace(':','-') }}";
         const a = document.createElement('a');
         a.href = dataUrl;
@@ -434,6 +406,7 @@
         alert('Gagal membuat JPG: ' + (e?.message || e));
         console.error(e);
       } finally {
+        // 6) Balik ke tampilan normal
         toggleCapture(false);
       }
     });
