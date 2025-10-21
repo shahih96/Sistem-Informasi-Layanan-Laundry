@@ -142,44 +142,52 @@
           </td>
           <td class="px-3 py-2">{{ $p->no_hp_pel }}</td>
           <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
+          {{-- Status --}}
+          <td class="px-3 py-2"
+              x-data="statusMenu({
+                id: {{ $p->id }},
+                current: @js(optional($p->statuses->first())->keterangan ?? 'Diproses'),
+                action: @js(route('admin.status.store'))
+              })">
 
-          {{-- Status (dropdown custom, tidak nimpa) --}}
-          <td class="px-3 py-2 relative" x-data="{ open:false }">
             @php
-              $ops = ['Diproses','Selesai'];
-              $curr = optional($p->statuses->first())->keterangan ?? 'Diproses';
-              $isDone = \Illuminate\Support\Str::of($curr)->lower()->contains('selesai');
+              $isDoneNow = \Illuminate\Support\Str::of(optional($p->statuses->first())->keterangan ?? 'Diproses')
+                            ->lower()->contains('selesai');
             @endphp
 
             <!-- Tombol tampilan status -->
-            <button type="button"
-                    @click="open=!open"
+            <button type="button" x-ref="trigger" @click="toggle()"
                     class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border
-                           {{ $isDone ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200' }}">
-              {{ $curr }}
+                          {{ $isDoneNow ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        : 'bg-yellow-50 text-yellow-700 border-yellow-200' }}">
+              {{ optional($p->statuses->first())->keterangan ?? 'Diproses' }}
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
               </svg>
             </button>
 
-            <!-- Menu pilihan -->
-            <div x-show="open"
-                 x-transition
-                 @click.outside="open=false"
-                 @keydown.escape.window="open=false"
-                 class="absolute z-50 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg">
-              @foreach($ops as $op)
-                <form method="POST" action="{{ route('admin.status.store') }}">
-                  @csrf
-                  <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
-                  <input type="hidden" name="keterangan" value="{{ $op }}">
-                  <button type="submit"
-                          class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 {{ $curr===$op ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                    {{ $op }}
-                  </button>
-                </form>
-              @endforeach
-            </div>
+            <!-- Menu pilihan (teleport ke body supaya tidak ketutup overflow tabel) -->
+            <template x-teleport="body">
+              <div x-show="open"
+                  x-transition.opacity
+                  @click.outside="close()"
+                  @keydown.escape.window="close()"
+                  class="fixed z-[100] bg-white border border-gray-200 rounded-lg shadow-lg"
+                  :style="`top:${pos.top}px;left:${pos.left}px;width:${pos.width}px`">
+                @foreach(['Diproses','Selesai'] as $op)
+                  <form action="{{ route('admin.status.store') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
+                    <input type="hidden" name="keterangan" value="{{ $op }}">
+                    <button type="submit"
+                            class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50
+                                  {{ (optional($p->statuses->first())->keterangan ?? 'Diproses') === $op ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                      {{ $op }}
+                    </button>
+                  </form>
+                @endforeach
+              </div>
+            </template>
           </td>
 
           {{-- Qty --}}
@@ -206,7 +214,7 @@
             @if(!$p->is_hidden)
               <form method="POST" action="{{ route('admin.pesanan.destroy',$p) }}">
                 @csrf @method('DELETE')
-                <button class="text-xs underline text-red-600">Sembunyikan</button>
+                <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Sembunyikan</button>
               </form>
             @else
               <span class="text-[11px] text-gray-500 italic">Tersembunyi</span>
@@ -325,6 +333,27 @@
         this.hp   = s.hp;
         this.openNama=false; this.openHp=false;
       },
+    }
+  }
+</script>
+
+<script>
+  function statusMenu({ id, current, action }) {
+    return {
+      id, current, action,
+      open: false,
+      ops: ['Diproses','Selesai'],
+      pos: { top: 0, left: 0, width: 160 },
+
+      toggle() {
+        if (this.open) return this.close();
+        const r = this.$refs.trigger.getBoundingClientRect();
+        this.pos.top   = r.bottom + window.scrollY + 4;
+        this.pos.left  = r.left   + window.scrollX;
+        this.pos.width = Math.max(r.width + 40, 140);
+        this.open = true;
+      },
+      close() { this.open = false; },
     }
   }
 </script>

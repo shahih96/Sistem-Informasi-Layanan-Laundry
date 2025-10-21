@@ -25,63 +25,61 @@ class LandingController extends Controller
         ->orderBy('nama_service')
         ->get();
 
-    // ====== grouping (versi aman, longgar & lengkap) ======
-    $rules = [
-        'Paket Express' => [
-            '/\b((3Kg)|(5Kg)|(7Kg)|kilat|exp)\b/i', '/\b(lipat|setrika)\b/i',
-        ],
-        'Setrika' => [
-            '/^(?!.*\bcuci\b).*?\bsetrika\b/i',
-        ],
-        'Paket Regular' => [
-            '/\b(regular|reguler)\b/i', '/\b(lipat|setrika)\b/i',
-        ],
-        'Self Service' => [
-            '/\b(self|mandiri)\b|kering|dryer/i',
-        ],
-        'Bed Cover' => [
-            '/bed\s*cover/i',
-        ],
-        'Hordeng' => [
-            '/hord(e)?ng|gorden/i',
-        ],
-        'Antar Jemput' => [
-            '/antar|jemput|pickup|delivery/i',
-        ],
-        'Add-on'=> [
-            '/deterjen|pewangi|proclin|plastik|fee/i'
-        ]
-    ];
+        $rules = [
+            'Paket Express' => [
+                '/\b((3Kg)|(5Kg)|(7Kg)|kilat|exp)\b/i', '/\b(lipat|setrika)\b/i',
+            ],
+            'Setrika' => [
+                '/^(?!.*\bcuci\b).*?\bsetrika\b/i',
+            ],
+            'Paket Regular' => [
+                '/\b(regular|reguler)\b/i', '/\b(lipat|setrika)\b/i',
+            ],
+            'Self Service' => [
+                '/\b(self|mandiri)\b|kering|dryer/i',
+            ],
+            'Bed Cover' => [
+                '/bed\s*cover/i',
+            ],
+            'Hordeng' => [
+                '/hord(e)?ng|gorden/i',
+            ],
+            'Antar Jemput' => [
+                '/antar|jemput|pickup|delivery/i',
+            ],
+            'Add-on'=> [
+                '/deterjen|pewangi|proclin|plastik|fee/i'
+            ]
+        ];
 
-    $grouped = $items->groupBy(function ($i) use ($rules) {
-        $name = Str::of($i->nama_service ?? '')->lower()->squish()->value();
-        foreach ($rules as $label => $patterns) {
-            $patterns = (array) $patterns;
-            $ok = true;
-            foreach ($patterns as $p) {
-                if (!preg_match($p, $name)) { $ok = false; break; }
+        $grouped = $items->groupBy(function ($i) use ($rules) {
+            $name = Str::of($i->nama_service ?? '')->lower()->squish()->value();
+            foreach ($rules as $label => $patterns) {
+                $patterns = (array) $patterns;
+                $ok = true;
+                foreach ($patterns as $p) {
+                    if (!preg_match($p, $name)) { $ok = false; break; }
+                }
+                if ($ok) return $label;
             }
-            if ($ok) return $label;
-        }
-        return 'Lainnya';
-    });
+            return 'Lainnya';
+        });
 
-    // urutkan sesuai lofi
-    $order = [
-        'Self Service',
-        'Paket Regular',
-        'Paket Express',
-        'Setrika',
-        'Bed Cover',
-        'Hordeng',
-        'Antar Jemput',
-        'Add-on',
-        'Lainnya'
-    ];
+        $order = [
+            'Self Service',
+            'Paket Regular',
+            'Paket Express',
+            'Setrika',
+            'Bed Cover',
+            'Hordeng',
+            'Antar Jemput',
+            'Add-on',
+            'Lainnya'
+        ];
 
-    $grouped = collect($order)
-        ->mapWithKeys(fn($k) => [$k => $grouped->get($k, collect())])
-        ->filter(fn($rows) => $rows->isNotEmpty());
+        $grouped = collect($order)
+            ->mapWithKeys(fn($k) => [$k => $grouped->get($k, collect())])
+            ->filter(fn($rows) => $rows->isNotEmpty());
         $wamsg = "Halo Qxpress Laundry! Saya mau pesan layanan Laundry";
         $waUrl = 'https://wa.me/6281373820217?text=' . rawurlencode($wamsg);
 
@@ -94,18 +92,14 @@ class LandingController extends Controller
         $items = collect();
         $error = null;
     
-        // Ambil hanya digit
         $digits = preg_replace('/\D+/', '', $q);
     
-        // Konversi ke format lokal jika user input "+62..."
         $local = Str::startsWith($digits, '62') ? '0'.substr($digits, 2) : $digits;
     
-        // Validasi panjang 11–13
         $len = strlen($local);
         $valid = $len >= 11 && $len <= 13;
     
         if ($q !== '' && $valid) {
-            // === CAPTCHA VALIDATION (reCAPTCHA v2) ===
             $request->validate(
                 ['g-recaptcha-response' => ['required', 'captcha']],
                 [
@@ -114,12 +108,11 @@ class LandingController extends Controller
                 ]
             );
     
-            // Siapkan varian pencarian (08xx... & +62xx...)
             $intl = '+62'.ltrim($local, '0');
     
             $items = PesananLaundry::with(['service','metode','latestStatusLog.status'])
             ->where('no_hp_pel', 'like', "%{$q}%")
-            ->where('is_hidden', false)   // ⬅️ baris ini penting
+            ->where('is_hidden', false)
             ->latest()
             ->get();
     

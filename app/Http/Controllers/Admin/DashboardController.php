@@ -60,17 +60,15 @@ class DashboardController extends Controller
             ->where('created_at', '<=', $end)
             ->sum('total');
 
-        // === FIX: samakan fallback dengan RekapController ===
+        // === Fallback pelunasan bon tunai yg tidak tercatat di rekap
+        // === (GANTI -> paid_at agar aksi "sembunyikan" dll tidak dianggap pelunasan)
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
+            ->whereNull('rekap.id')
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
-            ->where('pesanan_laundry.created_at', '<=', $end)
-            ->where('pesanan_laundry.updated_at', '<=', $end)
-            ->where(function($q) use ($idTunai) {
-                $q->whereNull('rekap.id')                              // belum pernah masuk rekap
-                ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai); // pernah masuk, tapi bukan tunai (mis. bon)
-            })
+            ->whereNotNull('pesanan_laundry.paid_at')
+            ->where('pesanan_laundry.paid_at', '<=', $end)
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
 
         // Fee kumulatif s.d. $end (biarkan seperti sebelumnya)

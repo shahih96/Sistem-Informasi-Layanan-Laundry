@@ -104,22 +104,22 @@
             <th class="px-3 py-2">No</th>
             <th class="px-3 py-2 text-left">Nama Layanan</th>
             <th class="px-3 py-2 text-center">Kuantitas</th>
-            <th class="px-3 py-2 text-right">Harga</th>
+            <th class="px-3 py-2 text-center">Harga</th>
             <th class="px-3 py-2 text-center">Metode</th>
-            <th class="px-3 py-2 text-right">Total</th>
-            <th class="px-3 py-2 text-right">Aksi</th>
+            <th class="px-3 py-2 text-center">Total</th>
+            <th class="px-3 py-2 text-center no-export">Aksi</th>
           </tr>
         </thead>
         <tbody>
           @foreach($omset as $i => $r)
             <tr class="border-t">
-              <td class="px-3 py-2">{{ ($omset->currentPage()-1)*$omset->perPage() + $loop->iteration }}</td>
+              <td class="px-3 py-2 text-center">{{ ($omset->currentPage()-1)*$omset->perPage() + $loop->iteration }}</td>
               <td class="px-3 py-2">{{ $r->service->nama_service ?? '-' }}</td>
               <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
-              <td class="px-3 py-2 text-right">Rp {{ number_format($r->subtotal,0,',','.') }}</td>
+              <td class="px-3 py-2 text-center">Rp {{ number_format($r->subtotal,0,',','.') }}</td>
               <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-              <td class="px-3 py-2 text-right">Rp {{ number_format($r->total,0,',','.') }}</td>
-              <td class="px-3 py-2 text-right">
+              <td class="px-3 py-2 text-center">Rp {{ number_format($r->total,0,',','.') }}</td>
+              <td class="px-3 py-2 text-center no-export">
                 {{-- Hapus 1 grup omzet: service_id + metode_pembayaran_id --}}
                 <form method="POST" action="{{ route('admin.rekap.destroy-group') }}"
                       onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
@@ -128,7 +128,7 @@
                   <input type="hidden" name="metode_pembayaran_id" value="{{ $r->metode_pembayaran_id }}">
                   {{-- Jika ingin batasi per tanggal, kirimkan juga hidden "tanggal" --}}
                   {{-- <input type="hidden" name="tanggal" value="{{ optional($r->created_at)->toDateString() }}"> --}}
-                  <button class="text-xs underline text-red-600">Hapus</button>
+                  <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
                 </form>
               </td>
             </tr>
@@ -149,14 +149,14 @@
             <th class="px-3 py-2">No</th>
             <th class="px-3 py-2 text-left">Nama</th>
             <th class="px-3 py-2 text-center">Metode</th>
-            <th class="px-3 py-2 text-right">Harga</th>
-            <th class="px-3 py-2 text-right">Aksi</th>
+            <th class="px-3 py-2 text-center">Harga</th>
+            <th class="px-3 py-2 text-center no-export">Aksi</th>
           </tr>
         </thead>
         <tbody>
           @foreach($pengeluaran as $i => $r)
             <tr class="border-t">
-              <td class="px-3 py-2">{{ $pengeluaran->firstItem() + $i }}</td>
+              <td class="px-3 py-2 text-center">{{ $pengeluaran->firstItem() + $i }}</td>
               <td class="px-3 py-2">
                 {{ $r->keterangan ?? '-' }}
 
@@ -178,12 +178,12 @@
                 @endif
               </td>
               <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-              <td class="px-3 py-2 text-right">Rp {{ number_format($r->total,0,',','.') }}</td>
-              <td class="px-3 py-2 text-right">
+              <td class="px-3 py-2 text-center">Rp {{ number_format($r->total,0,',','.') }}</td>
+              <td class="px-3 py-2 text-center no-export">
                 <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
                       onsubmit="return confirm('Hapus baris ini?')">
                   @csrf @method('DELETE')
-                  <button class="text-xs underline text-red-600">Hapus</button>
+                  <button  class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
                 </form>
               </td>
             </tr>
@@ -205,7 +205,7 @@
             <th class="px-3 py-2 text-left">Nama Pelanggan</th>
             <th class="px-3 py-2 text-left">Layanan</th>
             <th class="px-3 py-2 text-center">Kuantitas</th>
-            <th class="px-3 py-2 text-right">Total</th>
+            <th class="px-3 py-2 text-center">Total</th>
             <th class="px-3 py-2 text-center">Tanggal Masuk</th>
             <th class="px-3 py-2 text-center">Metode</th>   {{-- baru --}}
             <th class="px-3 py-2 text-center">Pembayaran</th>
@@ -223,13 +223,9 @@
 
           $metodeNow = strtolower($p->metode->nama ?? 'bon');
 
-          // MASIH BON per akhir hari terpilih jika:
-          // - sekarang masih bon, ATAU
-          // - sekarang sudah lunas tapi updated_at > asOfEnd (artinya pada tanggal yang dilihat masih bon)
           $isBonAsOfEnd = ($metodeNow === 'bon')
               || (($metodeNow !== 'bon') && optional($p->updated_at)->gt($asOfEnd));
 
-          // Baru dilunasi pada tanggal terpilih?
           $dibayarHariIni = ($metodeNow !== 'bon')
               && optional($p->updated_at)->between($asOfStart, $asOfEnd);
           @endphp
@@ -238,25 +234,48 @@
 
             <td class="px-3 py-2">
               <div class="font-medium">{{ $p->nama_pel }}</div>
-              <div class="text-xs text-gray-500">{{ $p->no_hp_pel }}</div>
             </td>
 
             <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
             <td class="px-3 py-2 text-center">{{ $qty }}</td>
-            <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
+            <td class="px-3 py-2 text-center">Rp {{ number_format($total,0,',','.') }}</td>
             <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
 
             {{-- Metode (dropdown) --}}
             <td class="px-3 py-2 text-center">
-              <form method="POST" action="{{ route('admin.rekap.update-bon', $p) }}">
+              @php $current = $metodeNow; @endphp
+
+              {{-- Form dropdown (sembunyikan saat export) --}}
+              <form method="POST"
+                    action="{{ route('admin.rekap.update-bon', $p) }}"
+                    class="no-export inline-block m-0"
+                    onsubmit="return confirm('Yakin ubah metode pembayaran?');">
                 @csrf
                 @method('PATCH')
-                <select name="metode" class="border rounded px-2 py-1 text-xs" onchange="this.form.submit()">
-                  <option value="bon"   {{ $metodeNow==='bon'   ? 'selected' : '' }}>Bon</option>
-                  <option value="tunai" {{ $metodeNow==='tunai' ? 'selected' : '' }}>Tunai</option>
-                  <option value="qris"  {{ $metodeNow==='qris'  ? 'selected' : '' }}>QRIS</option>
+                <select name="metode"
+                        class="border rounded px-2 py-1 text-xs"
+                        data-current="{{ $current }}"
+                        onchange="
+                          if (confirm('Ubah metode menjadi ' + this.options[this.selectedIndex].text + '?')) {
+                            this.form.submit();
+                          } else {
+                            this.value = this.getAttribute('data-current');
+                          }
+                        ">
+                  <option value="bon"   {{ $current==='bon'   ? 'selected' : '' }}>Bon</option>
+                  <option value="tunai" {{ $current==='tunai' ? 'selected' : '' }}>Tunai</option>
+                  <option value="qris"  {{ $current==='qris'  ? 'selected' : '' }}>QRIS</option>
                 </select>
               </form>
+
+              {{-- Teks statis pengganti (hanya tampil saat export) --}}
+              <span class="export-only hidden text-xs">
+                @switch($current)
+                  @case('tunai') Tunai @break
+                  @case('qris')  QRIS  @break
+                  @default       Bon
+                @endswitch
+              </span>
             </td>
 
             {{-- Pembayaran badge --}}
@@ -333,6 +352,13 @@
   #rekap-sheet.capture-mode .overflow-y-auto,
   #rekap-sheet.capture-mode .overflow-auto { overflow: visible !important; }
   #rekap-sheet.capture-mode ::-webkit-scrollbar { display: none !important; }
+  /* default: teks statis disembunyikan */
+  #rekap-sheet .export-only { display: none; }
+
+  /* saat capture/export: sembunyikan form, tampilkan teks */
+  #rekap-sheet.capture-mode .no-export   { display: none !important; }
+  #rekap-sheet.capture-mode .export-only { display: inline !important; }
+
 
   /* Paksa grid desktop saat capture (abaikan breakpoint “md”) */
   #rekap-sheet.capture-mode .capture-desktop-4 {
