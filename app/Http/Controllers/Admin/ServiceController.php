@@ -18,18 +18,20 @@ class ServiceController extends Controller
 
     public function store(Request $request)
     {
-        // Normalisasi input
-        $nama = trim($request->input('nama_service'));
-        $harga = (int) preg_replace('/\D+/', '', (string) $request->input('harga_service'));
+        $namaInput  = trim($request->input('nama_service'));
+        $hargaInput = $request->input('harga_service', $request->input('harga'));
+        $harga      = (int) preg_replace('/[^\d]/', '', (string) $hargaInput);
 
-        // Validasi: unik nama_service (case-insensitive praktis di app level)
         $request->validate([
             'nama_service'  => 'required|string|max:150',
             'harga_service' => 'required',
         ]);
 
-        // Cek manual (case-insensitive)
-        $exists = Service::whereRaw('LOWER(nama_service) = ?', [mb_strtolower($nama)])->exists();
+        if ($harga <= 0) {
+            return back()->withInput()->with('error', 'Harga tidak valid.');
+        }
+
+        $exists = Service::whereRaw('LOWER(nama_service) = ?', [mb_strtolower($namaInput)])->exists();
         if ($exists) {
             return back()->withInput()->with('error', 'Nama layanan sudah ada, gunakan nama lain.');
         }
@@ -38,7 +40,7 @@ class ServiceController extends Controller
             DB::beginTransaction();
 
             Service::create([
-                'nama_service'  => $nama,
+                'nama_service'  => $namaInput,
                 'harga_service' => $harga,
             ]);
 
@@ -47,7 +49,6 @@ class ServiceController extends Controller
         } catch (QueryException $e) {
             DB::rollBack();
 
-            // 23000 = integrity constraint violation (mis. unique index)
             if ($e->getCode() === '23000') {
                 return back()->withInput()->with('error', 'Nama layanan sudah terdaftar.');
             }
@@ -58,16 +59,20 @@ class ServiceController extends Controller
 
     public function update(Request $request, Service $service)
     {
-        $nama  = trim($request->input('nama_service'));
-        $harga = (int) preg_replace('/\D+/', '', (string) $request->input('harga_service'));
+        $namaInput  = trim($request->input('nama_service'));
+        $hargaInput = $request->input('harga_service', $request->input('harga'));
+        $harga      = (int) preg_replace('/[^\d]/', '', (string) $hargaInput);
 
         $request->validate([
             'nama_service'  => 'required|string|max:150',
             'harga_service' => 'required',
         ]);
 
-        // Cek manual unik selain dirinya sendiri (case-insensitive)
-        $exists = Service::whereRaw('LOWER(nama_service) = ?', [mb_strtolower($nama)])
+        if ($harga <= 0) {
+            return back()->withInput()->with('error', 'Harga tidak valid.');
+        }
+
+        $exists = Service::whereRaw('LOWER(nama_service) = ?', [mb_strtolower($namaInput)])
             ->where('id', '!=', $service->id)
             ->exists();
         if ($exists) {
@@ -78,7 +83,7 @@ class ServiceController extends Controller
             DB::beginTransaction();
 
             $service->update([
-                'nama_service'  => $nama,
+                'nama_service'  => $namaInput,
                 'harga_service' => $harga,
             ]);
 
@@ -96,6 +101,6 @@ class ServiceController extends Controller
     public function destroy(Service $service)
     {
         $service->delete();
-        return back()->with('ok','Layanan dihapus.');
+        return back()->with('ok', 'Layanan dihapus.');
     }
 }

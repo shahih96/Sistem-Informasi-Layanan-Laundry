@@ -10,7 +10,7 @@
   </div>
   <div class="bg-white p-5 rounded-xl shadow">
     <div class="text-sm opacity-70">Pendapatan Hari ini</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($pendapatanHariIni,0,',','.') }}</div>
+    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($pendapatanBersihHariIni,0,',','.') }}</div>
   </div>
   <div class="bg-white p-5 rounded-xl shadow">
     <div class="text-sm opacity-70">Pesanan Diproses</div>

@@ -9,20 +9,12 @@
 </head>
 <body class="font-sans text-gray-800 bg-[#f5f8ff]">
 
-  {{-- TOPBAR senada user --}}
   <header class="h-16 w-full bg-[#084cac] text-white shadow">
     <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
       <a href="{{ route('landing.home') }}" class="flex items-center gap-3 min-w-0">
-          <img src="{{ asset('images/logo.png') }}" alt="Logo Qxpress Laundry" class="h-8 w-auto md:h-9 block">
+        <img src="{{ asset('images/logo.png') }}" alt="Logo Qxpress Laundry" class="h-8 w-auto md:h-9 block">
         <span class="font-semibold text-lg truncate">Qxpress Laundry</span>
       </a>
-
-      <nav class="hidden md:flex items-center gap-6 text-sm">
-        <a class="hover:underline/60" href="{{ route('landing.home') }}">Home</a>
-        <a class="hover:underline/60" href="{{ Route::has('services') ? route('services') : '#' }}">Daftar Harga</a>
-        <a class="hover:underline/60" href="{{ url('/#tentang') }}">Tentang</a>
-        <a class="hover:underline/60" href="{{ url('/#pesan') }}">Pesan</a>
-      </nav>
     </div>
   </header>
 

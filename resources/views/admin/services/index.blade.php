@@ -27,13 +27,15 @@
     @csrf
     <input name="nama_service" placeholder="Nama Layanan" class="border rounded px-3 py-2" value="{{ old('nama_service') }}" required>
 
-    {{-- Input harga tampilan (diformat), dan hidden aslinya --}}
-    <div>
-      <input id="harga_create_display" placeholder="Harga (Rp)"
+    {{-- Input harga --}}
+    <div class="relative">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
+      <input id="harga_create_display" placeholder="Harga"
              type="text" inputmode="numeric"
-             class="border rounded px-3 py-2 money-input w-full"
+             class="border rounded pl-8 pr-2 py-2 w-full"
              value="{{ old('harga_service') ? number_format((int)old('harga_service'),0,',','.') : '' }}"
-             autocomplete="off">
+             autocomplete="off"
+             oninput="this.nextElementSibling.value=this.value.replace(/\D/g,'');this.value=this.value.replace(/\D/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,'.');">
       <input id="harga_create_value" type="hidden" name="harga_service" value="{{ old('harga_service') }}">
     </div>
 
@@ -60,27 +62,27 @@
           <td class="px-3 py-2">{{ $services->firstItem() + $i }}</td>
 
           <td class="px-3 py-2">
-            <form method="POST" action="{{ route('admin.services.update',$s) }}"
-                  class="flex gap-2 items-center service-update-form">
+            <form method="POST" action="{{ route('admin.services.update',$s) }}" class="flex gap-2 items-center">
               @csrf @method('PUT')
               <input name="nama_service" value="{{ $s->nama_service }}" class="border rounded px-2 py-1">
           </td>
 
+          {{-- Input harga dengan prefix Rp --}}
           <td class="px-3 py-2">
-              {{-- Tampilkan yang terformat di input, kirim nilai asli via hidden --}}
-              <input type="text" inputmode="numeric"
-                     class="border rounded px-2 py-1 w-36 money-input"
+            <div class="relative">
+              <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
+              <input name="harga_display" type="text" inputmode="numeric"
+                     class="text-right border rounded pl-7 pr-2 py-1 w-32"
                      value="{{ number_format((int)$s->harga_service,0,',','.') }}"
-                     autocomplete="off">
+                     autocomplete="off"
+                     oninput="this.nextElementSibling.value=this.value.replace(/\D/g,'');this.value=this.value.replace(/\D/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,'.');">
               <input type="hidden" name="harga_service" value="{{ (int)$s->harga_service }}">
+            </div>
           </td>
 
           <td class="px-3 py-2">{{ $s->updated_at->format('d M Y') }}</td>
 
           <td class="px-3 py-2 text-right">
-              <span class="mr-3 font-medium text-gray-800">
-                {{-- Di tampilan tabel biasa (di luar input), bisa juga: Rp {{ number_format($s->harga_service,0,',','.') }} --}}
-              </span>
               <button class="px-3 py-1 text-xs rounded bg-gray-800 text-white">update</button>
             </form>
 
@@ -96,62 +98,4 @@
   </div>
   <div class="mt-4">{{ $services->links('pagination::tailwind') }}</div>
 </div>
-
-{{-- Formatter rupiah sederhana --}}
-<script>
-  // format angka -> "1.234.567"
-  function formatIDR(n) {
-    if (!n) return '';
-    return n.replace(/\D/g,'').replace(/^0+/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  }
-  // "1.234.567" -> 1234567
-  function parseIDR(n) {
-    return n.replace(/\D/g,'');
-  }
-
-  // CREATE
-  (function(){
-    const disp = document.getElementById('harga_create_display');
-    const val  = document.getElementById('harga_create_value');
-    if (disp && val) {
-      disp.addEventListener('input', () => {
-        disp.value = formatIDR(disp.value);
-        val.value  = parseIDR(disp.value);
-      });
-      // init
-      disp.value = formatIDR(disp.value);
-      val.value  = parseIDR(disp.value);
-    }
-  })();
-
-  // UPDATE: setiap baris punya money-input + hidden setelahnya
-  document.querySelectorAll('form.service-update-form').forEach((frm) => {
-    const moneyInput = frm.querySelector('input.money-input');
-    const hidden     = frm.querySelector('input[type="hidden"][name="harga_service"]');
-
-    if (moneyInput && hidden) {
-      // init view
-      moneyInput.value = formatIDR(moneyInput.value);
-
-      moneyInput.addEventListener('input', () => {
-        moneyInput.value = formatIDR(moneyInput.value);
-        hidden.value     = parseIDR(moneyInput.value);
-      });
-
-      frm.addEventListener('submit', () => {
-        hidden.value     = parseIDR(moneyInput.value);
-      });
-    }
-  });
-
-  // CREATE form ensure hidden numeric on submit
-  const createForm = document.querySelector('form.service-create-form');
-  if (createForm) {
-    createForm.addEventListener('submit', () => {
-      const disp = document.getElementById('harga_create_display');
-      const val  = document.getElementById('harga_create_value');
-      if (disp && val) val.value = parseIDR(disp.value);
-    });
-  }
-</script>
 @endsection

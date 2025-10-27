@@ -12,22 +12,11 @@ class AdminUserSeeder extends Seeder
     {
         // Admin default untuk login dashboard
         User::updateOrCreate(
-            ['email' => 'admin@qxpress.test'],
+            ['email' => 'qxpresslaundry@gmail.com'],
             [
                 'name'      => 'Administrator',
-                'password'  => Hash::make('admin12345'), // ganti bila perlu
-                'is_admin'  => true,                     // pastikan kolom ini ada (boolean)
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Optional: user non-admin (contoh)
-        User::updateOrCreate(
-            ['email' => 'staff@qxpress.test'],
-            [
-                'name'      => 'Staff Laundry',
-                'password'  => Hash::make('staff12345'),
-                'is_admin'  => false,
+                'password'  => Hash::make('qxlairan139'),
+                'is_admin'  => true,                     
                 'email_verified_at' => now(),
             ]
         );

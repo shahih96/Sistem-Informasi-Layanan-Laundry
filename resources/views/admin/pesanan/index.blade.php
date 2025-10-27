@@ -7,7 +7,7 @@
 
   <form method="POST" action="{{ route('admin.pesanan.store') }}" class="grid md:grid-cols-2 gap-4" x-data="pelangganPicker()">
     @csrf
-    <!-- {{-- NAMA (dengan datalist) --}} -->
+    <!-- Nama Pelanggan -->
     <div class="relative">
       <label class="text-sm">Nama Pelanggan</label>
       <input name="nama_pel"
@@ -16,12 +16,10 @@
             @blur="hideSoon('nama')"
             @focus="showList('nama')"
             autocomplete="off"
-            list="pelanggan-nama-list"
             class="mt-1 w-full border rounded px-3 py-2" required>
-      <!-- Dropdown saran Nama -->
       <div x-show="openNama && namaSaran.length"
-          class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow"
-          @mousedown.prevent>
+           class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+           @mousedown.prevent>
         <template x-for="s in namaSaran" :key="s.key">
           <button type="button"
                   class="block w-full text-left px-3 py-2 hover:bg-gray-50"
@@ -33,7 +31,7 @@
       </div>
     </div>
 
-    <!-- {{-- NO HP (dengan datalist) --}} -->
+    <!-- Nomor HP -->
     <div class="relative">
       <label class="text-sm">No. HP</label>
       <input name="no_hp_pel"
@@ -42,12 +40,10 @@
             @blur="hideSoon('hp')"
             @focus="showList('hp')"
             autocomplete="off"
-            list="pelanggan-hp-list"
             class="mt-1 w-full border rounded px-3 py-2" required>
-      <!-- Dropdown saran HP -->
       <div x-show="openHp && hpSaran.length"
-          class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow"
-          @mousedown.prevent>
+           class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow"
+           @mousedown.prevent>
         <template x-for="s in hpSaran" :key="s.key">
           <button type="button"
                   class="block w-full text-left px-3 py-2 hover:bg-gray-50"
@@ -72,13 +68,13 @@
       </select>
     </div>
 
-    <!-- {{-- KUANTITAS --}} -->
+    <!-- Kuantitas -->
     <div>
       <label class="text-sm">Kuantitas</label>
       <input name="qty" type="number" min="1" value="{{ old('qty',1) }}" class="mt-1 w-full border rounded px-3 py-2" required>
     </div>
 
-    <!-- {{-- METODE PEMBAYARAN --}} -->
+    <!-- Metode Pembayaran -->
     <div>
       <label class="text-sm">Metode Pembayaran</label>
       <select name="metode_pembayaran_id" class="mt-1 w-full border rounded px-3 py-2" required>
@@ -88,6 +84,7 @@
       </select>
     </div>
 
+    <!-- Status Awal -->
     <div>
       <label class="text-sm">Status Pesanan</label>
       <select name="status_awal" class="mt-1 w-full border rounded px-3 py-2" required>
@@ -107,7 +104,6 @@
   <div class="overflow-x-auto">
     <table class="min-w-full text-sm">
       <thead class="bg-gray-50">
-        {{-- HAPUS referensi $p di THEAD --}}
         <tr>
           <th class="px-3 py-2 text-left">Pelanggan</th>
           <th class="px-3 py-2 text-left">No HP</th>
@@ -126,90 +122,42 @@
           $qty     = max(1, (int)($p->qty ?? 1));
           $harga   = (int)($p->service->harga_service ?? 0);
           $total   = $qty * $harga;
-          $metode  = $p->metode->nama ?? null; // relasi ke metode_pembayaran
+          $metode  = $p->metode->nama ?? null;
           $isLunas = in_array($metode, ['tunai','qris']);
+          $currStatus = optional($p->statuses->first())->keterangan ?? 'Diproses';
         @endphp
-        {{-- Tambahkan highlight row disini, di TBODY --}}
+
         <tr class="border-t {{ $p->is_hidden ? 'bg-red-50/60' : '' }}">
-          {{-- Pelanggan, No HP, Layanan --}}
           <td class="px-3 py-2">
             {{ $p->nama_pel }}
             @if($p->is_hidden)
-              <span class="ml-2 align-middle inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border bg-red-100 text-red-700 border-red-200">
-                Disembunyikan
-              </span>
+              <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border bg-red-100 text-red-700 border-red-200">Disembunyikan</span>
             @endif
           </td>
           <td class="px-3 py-2">{{ $p->no_hp_pel }}</td>
           <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
-          {{-- Status --}}
-          <td class="px-3 py-2"
-              x-data="statusMenu({
-                id: {{ $p->id }},
-                current: @js(optional($p->statuses->first())->keterangan ?? 'Diproses'),
-                action: @js(route('admin.status.store'))
-              })">
 
-            @php
-              $isDoneNow = \Illuminate\Support\Str::of(optional($p->statuses->first())->keterangan ?? 'Diproses')
-                            ->lower()->contains('selesai');
-            @endphp
-
-            <!-- Tombol tampilan status -->
-            <button type="button" x-ref="trigger" @click="toggle()"
-                    class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border
-                          {{ $isDoneNow ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                        : 'bg-yellow-50 text-yellow-700 border-yellow-200' }}">
-              {{ optional($p->statuses->first())->keterangan ?? 'Diproses' }}
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
-              </svg>
-            </button>
-
-            <!-- Menu pilihan (teleport ke body supaya tidak ketutup overflow tabel) -->
-            <template x-teleport="body">
-              <div x-show="open"
-                  x-transition.opacity
-                  @click.outside="close()"
-                  @keydown.escape.window="close()"
-                  class="fixed z-[100] bg-white border border-gray-200 rounded-lg shadow-lg"
-                  :style="`top:${pos.top}px;left:${pos.left}px;width:${pos.width}px`">
-                @foreach(['Diproses','Selesai'] as $op)
-                  <form action="{{ route('admin.status.store') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
-                    <input type="hidden" name="keterangan" value="{{ $op }}">
-                    <button type="submit"
-                            class="w-full text-left px-3 py-2 text-xs hover:bg-gray-50
-                                  {{ (optional($p->statuses->first())->keterangan ?? 'Diproses') === $op ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                      {{ $op }}
-                    </button>
-                  </form>
-                @endforeach
-              </div>
-            </template>
+          {{-- ✅ Dropdown status versi sederhana --}}
+          <td class="px-3 py-2">
+            <form method="POST" action="{{ route('admin.status.store') }}">
+              @csrf
+              <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
+              <select name="keterangan" class="border rounded px-2 py-1 text-xs" onchange="this.form.submit()">
+                <option value="Diproses" {{ $currStatus==='Diproses' ? 'selected' : '' }}>Diproses</option>
+                <option value="Selesai" {{ $currStatus==='Selesai' ? 'selected' : '' }}>Selesai</option>
+              </select>
+            </form>
           </td>
 
-          {{-- Qty --}}
           <td class="px-3 py-2 text-center">{{ $qty }}</td>
-
-          {{-- Total --}}
           <td class="px-3 py-2 text-right">Rp {{ number_format($total,0,',','.') }}</td>
-
-          {{-- Pembayaran (Lunas/Belum Lunas) --}}
           <td class="px-3 py-2 text-center">
             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
               {{ $isLunas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
               {{ $isLunas ? 'Lunas' : 'Belum Lunas' }}
             </span>
           </td>
-
-          {{-- Update Terakhir --}}
-          <td class="px-3 py-2">
-            {{ optional($p->statuses->first())->created_at?->format('d/m/y H:i') }}
-          </td>
-
-          {{-- Aksi --}}
+          <td class="px-3 py-2">{{ optional($p->statuses->first())->created_at?->format('d/m/y H:i') }}</td>
           <td class="px-3 py-2 text-right">
             @if(!$p->is_hidden)
               <form method="POST" action="{{ route('admin.pesanan.destroy',$p) }}">
@@ -229,133 +177,43 @@
 </div>
 
 <script>
-  // Daftar pelanggan unik (nama+hp) dari DB
+  // kode pelangganPicker tetap sama
   const CUSTOMERS = [
     @foreach($pelangganOptions as $pl)
       { nama: {!! json_encode($pl->nama_pel) !!}, hp: {!! json_encode($pl->no_hp_pel) !!} },
     @endforeach
   ];
-
-  // Util
   const norm = s => (s||'').toString().trim().toLowerCase();
   const onlyDigits = s => (s||'').replace(/\D/g,'');
-  // Levenshtein sederhana (cukup untuk input pendek)
-  function lev(a,b){
-    a = norm(a); b = norm(b);
-    const m = a.length, n = b.length;
-    if(!m) return n; if(!n) return m;
-    const dp = Array.from({length:m+1}, (_,i)=>Array(n+1).fill(0));
-    for(let i=0;i<=m;i++) dp[i][0]=i;
-    for(let j=0;j<=n;j++) dp[0][j]=j;
-    for(let i=1;i<=m;i++){
-      for(let j=1;j<=n;j++){
-        const cost = a[i-1]===b[j-1] ? 0 : 1;
-        dp[i][j]=Math.min(
-          dp[i-1][j]+1,
-          dp[i][j-1]+1,
-          dp[i-1][j-1]+cost
-        );
-      }
-    }
-    return dp[m][n];
-  }
-
-  function rankByName(query){
-    const q = norm(query);
-    if(!q) return [];
-    return CUSTOMERS.map((c,i)=>{
-      const n = norm(c.nama);
-      const score =
-        (n.startsWith(q) ? 0 :
-         n.includes(q)   ? 1 :
-         lev(n,q)); // makin kecil makin mirip
-      return { key:i, ...c, score };
-    })
-    .filter(x => x.score <= 3 || x.score===0 || x.score===1)
-    .sort((a,b)=>a.score-b.score)
-    .slice(0,6);
-  }
-
-  function rankByHp(query){
-    const q = onlyDigits(query);
-    if(!q) return [];
-    return CUSTOMERS.map((c,i)=>{
-      const h = onlyDigits(c.hp);
-      const score =
-        (h.startsWith(q) ? 0 :
-         h.includes(q)   ? 1 :
-         lev(h,q));
-      return { key:i, ...c, score };
-    })
-    .filter(x => x.score <= 3 || x.score===0 || x.score===1)
-    .sort((a,b)=>a.score-b.score)
-    .slice(0,6);
-  }
-
-  function pelangganPicker() {
-    return {
-      // state
-      nama: @json(old('nama_pel','')),
-      hp:   @json(old('no_hp_pel','')),
-      openNama:false, openHp:false,
-      namaSaran:[], hpSaran:[],
-      hideTimer:null,
-
-      // dropdown control
-      showList(which){ if(which==='nama') this.openNama=true; else this.openHp=true; },
-      hideSoon(which){
-        // tunda dikit biar klik suggestion gak ketutup duluan
-        clearTimeout(this.hideTimer);
-        this.hideTimer = setTimeout(()=>{
-          if(which==='nama') this.openNama=false; else this.openHp=false;
-        }, 120);
-      },
-
-      // input handlers
-      onNamaInput(){
-        this.namaSaran = rankByName(this.nama);
-        this.openNama = !!this.namaSaran.length;
-        // auto isi HP kalau cocok 100% (score 0 dan startsWith)
-        const exact = CUSTOMERS.find(c => norm(c.nama)===norm(this.nama));
-        if(exact && !this.hp) this.hp = exact.hp;
-      },
-      onHpInput(){
-        this.hpSaran = rankByHp(this.hp);
-        this.openHp = !!this.hpSaran.length;
-        // auto isi Nama kalau nomor match penuh
-        const exact = CUSTOMERS.find(c => onlyDigits(c.hp)===onlyDigits(this.hp));
-        if(exact && !this.nama) this.nama = exact.nama;
-      },
-
-      // pakai suggestion
-      applySuggestion(s){
-        this.nama = s.nama;
-        this.hp   = s.hp;
-        this.openNama=false; this.openHp=false;
-      },
-    }
-  }
+  function lev(a,b){a=norm(a);b=norm(b);const m=a.length,n=b.length;
+    if(!m)return n;if(!n)return m;
+    const dp=Array.from({length:m+1},(_,i)=>Array(n+1).fill(0));
+    for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;
+    for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){
+      const cost=a[i-1]===b[j-1]?0:1;
+      dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+cost);
+    }}return dp[m][n];}
+  function rankByName(q){q=norm(q);if(!q)return[];return CUSTOMERS.map((c,i)=>{
+    const n=norm(c.nama);const s=(n.startsWith(q)?0:n.includes(q)?1:lev(n,q));
+    return{key:i,...c,score:s};}).filter(x=>x.score<=3||x.score<=1)
+    .sort((a,b)=>a.score-b.score).slice(0,6);}
+  function rankByHp(q){q=onlyDigits(q);if(!q)return[];return CUSTOMERS.map((c,i)=>{
+    const h=onlyDigits(c.hp);const s=(h.startsWith(q)?0:h.includes(q)?1:lev(h,q));
+    return{key:i,...c,score:s};}).filter(x=>x.score<=3||x.score<=1)
+    .sort((a,b)=>a.score-b.score).slice(0,6);}
+  function pelangganPicker(){return{
+    nama:@json(old('nama_pel','')),hp:@json(old('no_hp_pel','')),
+    openNama:false,openHp:false,namaSaran:[],hpSaran:[],hideTimer:null,
+    showList(w){if(w==='nama')this.openNama=true;else this.openHp=true;},
+    hideSoon(w){clearTimeout(this.hideTimer);
+      this.hideTimer=setTimeout(()=>{if(w==='nama')this.openNama=false;else this.openHp=false;},120);},
+    onNamaInput(){this.namaSaran=rankByName(this.nama);
+      this.openNama=!!this.namaSaran.length;
+      const e=CUSTOMERS.find(c=>norm(c.nama)===norm(this.nama));if(e&&!this.hp)this.hp=e.hp;},
+    onHpInput(){this.hpSaran=rankByHp(this.hp);
+      this.openHp=!!this.hpSaran.length;
+      const e=CUSTOMERS.find(c=>onlyDigits(c.hp)===onlyDigits(this.hp));if(e&&!this.nama)this.nama=e.nama;},
+    applySuggestion(s){this.nama=s.nama;this.hp=s.hp;this.openNama=false;this.openHp=false;}
+  }}
 </script>
-
-<script>
-  function statusMenu({ id, current, action }) {
-    return {
-      id, current, action,
-      open: false,
-      ops: ['Diproses','Selesai'],
-      pos: { top: 0, left: 0, width: 160 },
-
-      toggle() {
-        if (this.open) return this.close();
-        const r = this.$refs.trigger.getBoundingClientRect();
-        this.pos.top   = r.bottom + window.scrollY + 4;
-        this.pos.left  = r.left   + window.scrollX;
-        this.pos.width = Math.max(r.width + 40, 140);
-        this.open = true;
-      },
-      close() { this.open = false; },
-    }
-  }
-</script>
-
 @endsection

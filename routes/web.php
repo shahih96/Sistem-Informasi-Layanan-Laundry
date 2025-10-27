@@ -7,16 +7,12 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\Admin\{
     DashboardController as AdminDashboardController,
     ServiceController,
-    PesananController,
-    StatusController,
-    MetodePembayaranController,
     BonController,
     SaldoBonController,
     SaldoKartuController,
     SaldoKasController,
     FeeController,
     RekapController,
-    InformasiLaundryController,
     PesananLaundryController,
     StatusPesananController
 };

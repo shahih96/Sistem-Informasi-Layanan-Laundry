@@ -15,12 +15,6 @@
         <img src="{{ asset('images/logo.png') }}" alt="Logo Qxpress Laundry" class="h-8 w-auto md:h-9 block">
         <span class="font-semibold text-lg truncate">Qxpress Laundry</span>
       </a>
-      <nav class="hidden md:flex items-center gap-6 text-sm">
-        <a class="hover:underline/60" href="{{ route('landing.home') }}">Home</a>
-        <a class="hover:underline/60" href="{{ route('services') }}">Daftar Harga</a>
-        <a class="hover:underline/60" href="{{ url('/#tentang') }}">Tentang</a>
-        <a class="hover:underline/60" href="{{ url('/#pesan') }}">Pesan</a>
-      </nav>
     </div>
   </header>
 

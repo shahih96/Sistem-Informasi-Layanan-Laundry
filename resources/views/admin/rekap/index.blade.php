@@ -281,7 +281,7 @@
             {{-- Pembayaran badge --}}
             <td class="px-3 py-2 text-center">
               @if($isBonAsOfEnd)
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-yellow-50 text-yellow-700 border border-yellow-200">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-50 text-red-700 border border-red-200">
                   Belum Lunas
                 </span>
               @else

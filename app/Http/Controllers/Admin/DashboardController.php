@@ -23,10 +23,35 @@ class DashboardController extends Controller
         // ================= PESANAN (HARI INI) =================
         $totalPesananHariIni = PesananLaundry::whereBetween('created_at', [$start, $end])->count();
 
-        $pendapatanHariIni = PesananLaundry::query()
-            ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->whereBetween('pesanan_laundry.created_at', [$start, $end])
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+        // Pendapatan hari ini
+        $pendapatanHariIni = Rekap::whereNotNull('service_id')
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('total');  
+        
+        $rowsToday = Rekap::with('service')
+        ->whereNotNull('service_id')
+        ->whereBetween('created_at', [$start, $end])
+        ->get();
+
+        $kgLipat = 0; $feeSetrika = 0;
+        foreach ($rowsToday as $row) {
+            $qty  = (int)($row->qty ?? 0); if ($qty <= 0) continue;
+            $name = strtolower($row->service->nama_service ?? '');
+
+            if (str_contains($name,'lipat') && str_contains($name,'/kg')) { $kgLipat += $qty; continue; }
+            if (str_contains($name,'cuci lipat express') && str_contains($name,'7kg')) { $kgLipat += 7 * $qty; continue; }
+            if (str_contains($name,'bed cover')) { $kgLipat += 7 * $qty; continue; }
+
+            if (str_contains($name,'cuci setrika express 3kg')) { $feeSetrika += 3000 * $qty; continue; }
+            if (str_contains($name,'cuci setrika express 5kg')) { $feeSetrika += 5000 * $qty; continue; }
+            if (str_contains($name,'cuci setrika express 7kg')) { $feeSetrika += 7000 * $qty; continue; }
+            if (str_contains($name,'setrika')) { $feeSetrika += 1000 * $qty; }
+        }
+        $feeLipatHariIni = intdiv($kgLipat, 7) * 3000;
+        $feeTotalHariIni = $feeLipatHariIni + $feeSetrika;
+
+        $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni);
+
 
         // Status TERBARU yg terjadi HARI INI
         $latestToday = PesananLaundry::whereHas('statuses', fn($q) =>
@@ -60,18 +85,19 @@ class DashboardController extends Controller
             ->where('created_at', '<=', $end)
             ->sum('total');
 
-        // === Fallback pelunasan bon tunai yg tidak tercatat di rekap
-        // === (GANTI -> paid_at agar aksi "sembunyikan" dll tidak dianggap pelunasan)
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->whereNull('rekap.id')
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->whereNotNull('pesanan_laundry.paid_at')
             ->where('pesanan_laundry.paid_at', '<=', $end)
+            ->where(function($q) use ($idTunai) {
+                $q->whereNull('rekap.id')
+                ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
+            })
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
 
-        // Fee kumulatif s.d. $end (biarkan seperti sebelumnya)
+        // Fee kumulatif s.d. $end
         $rowsToEnd = Rekap::with('service')
             ->whereNotNull('service_id')
             ->where('created_at', '<=', $end)
@@ -92,9 +118,11 @@ class DashboardController extends Controller
             if (str_contains($name,'cuci setrika express 7kg')) { $feeSetrikaCum += 7000 * $qty; continue; }
             if (str_contains($name,'setrika')) { $feeSetrikaCum += $qty * 1000; }
         }
+
         $feeLipatCum = intdiv($kgLipatTotalCum, 7) * 3000;
         $totalFeeCum = $feeLipatCum + $feeSetrikaCum;
 
+        // totalCash = kas masuk - keluar - fee
         $totalCash = $cashMasukTunaiCum + $extraCashFromBonLunasTunaiCum - $cashKeluarTunaiCum - $totalFeeCum;
 
         // ================= RINGKASAN BULAN BERJALAN =================
@@ -157,6 +185,7 @@ class DashboardController extends Controller
             'day',
             'totalPesananHariIni',
             'pendapatanHariIni',
+            'pendapatanBersihHariIni',
             'pesananDiproses',
             'pesananSelesai',
             'riwayat',
