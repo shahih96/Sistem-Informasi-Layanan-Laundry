@@ -85,6 +85,7 @@ class DashboardController extends Controller
             ->where('created_at', '<=', $end)
             ->sum('total');
 
+        // 🔧 Perubahan: gunakan harga_satuan jika tersedia
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
@@ -95,7 +96,7 @@ class DashboardController extends Controller
                 $q->whereNull('rekap.id')
                 ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
             })
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
 
         // Fee kumulatif s.d. $end
         $rowsToEnd = Rekap::with('service')

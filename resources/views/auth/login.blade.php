@@ -6,6 +6,7 @@
   <title>Login - Qxpress Laundry</title>
   @vite(['resources/css/app.css','resources/js/app.js'])
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="icon" href="{{ asset('images/favicon.ico') }}" type="image/x-icon">
 </head>
 <body class="font-sans text-gray-800 bg-[#f5f8ff]">
 

@@ -120,7 +120,7 @@
       @foreach($pesanan as $p)
         @php
           $qty     = max(1, (int)($p->qty ?? 1));
-          $harga   = (int)($p->service->harga_service ?? 0);
+          $harga   = (int)($p->harga_satuan ?? $p->service->harga_service ?? 0);
           $total   = $qty * $harga;
           $metode  = $p->metode->nama ?? null;
           $isLunas = in_array($metode, ['tunai','qris']);

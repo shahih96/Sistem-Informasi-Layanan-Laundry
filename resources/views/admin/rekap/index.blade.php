@@ -82,17 +82,29 @@
   <div class="mt-4 grid md:grid-cols-3 gap-4 capture-desktop-3">
     <div class="bg-white p-5 rounded-xl shadow">
       <div class="text-sm opacity-70">Sisa Saldo Kartu Hari Ini</div>
-      <div class="mt-2 text-3xl font-bold">{{ is_null($saldoKartu) ? '—' : 'Rp '.number_format($saldoKartu,0,',','.') }}</div>
+      <div class="mt-2 text-3xl font-bold">
+        {{ is_null($saldoKartu) ? '—' : 'Rp '.number_format($saldoKartu,0,',','.') }}
+      </div>
+      <div class="text-xs text-gray-500 mt-1">
+        Saldo kartu kemarin: {{ is_null($saldoPrev) ? '—' : 'Rp '.number_format($saldoPrev,0,',','.') }}
+      </div>
     </div>
+
     <div class="bg-white p-5 rounded-xl shadow">
       <div class="text-sm opacity-70">Total Tap Kartu Hari Ini</div>
-      <div class="mt-2 text-3xl font-bold">{{ number_format($totalTapHariIni,0,',','.') }}</div>
+      <div class="mt-2 text-3xl font-bold">
+        {{ ($totalTapHariIni === null || (int)$totalTapHariIni === 0) ? '—' : (int)$totalTapHariIni }}
+      </div>
     </div>
+
     <div class="bg-white p-5 rounded-xl shadow">
       <div class="text-sm opacity-70">Tap Gagal Hari Ini</div>
-      <div class="mt-2 text-3xl font-bold">{{ number_format($tapGagalHariIni,0,',','.') }}</div>
+      <div class="mt-2 text-3xl font-bold">
+        {{ ($tapGagalHariIni === null || (int)$tapGagalHariIni === 0) ? '—' : number_format($tapGagalHariIni,0,',','.') }}
+      </div>
     </div>
   </div>
+
 
   <!-- {{-- Tabel Omset --}} -->
   <div class="mt-8 bg-white p-5 rounded-xl shadow">
@@ -218,7 +230,7 @@
           $asOfEnd   = ($day ?? now())->copy()->endOfDay();
 
           $qty   = max(1, (int)($p->qty ?? 1));
-          $harga = (int)($p->service->harga_service ?? 0);
+          $harga = (int)($p->harga_satuan ?? $p->service->harga_service ?? 0);
           $total = $qty * $harga;
 
           $metodeNow = strtolower($p->metode->nama ?? 'bon');
@@ -308,7 +320,7 @@
 
 <!-- {{-- Tombol Input Rekap --}} -->
 <div class="mt-6 text-right">
-  <a href="{{ route('admin.rekap.input') }}"
+  <a href="{{ route('admin.rekap.input', ['d' => request('d', optional($day ?? now())->toDateString())]) }}"
      class="inline-flex items-center gap-2 rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>

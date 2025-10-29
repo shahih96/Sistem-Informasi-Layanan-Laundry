@@ -19,7 +19,7 @@ class PesananLaundryController extends Controller
                         'service',
                         'metode',                                 
                         'statuses' => fn($q) => $q->latest(),
-                    ])->latest()->paginate(10);
+                    ])->latest()->paginate(5);
 
         $services = Service::orderBy('nama_service')->get();
         $metodes  = MetodePembayaran::orderBy('id')->get();
@@ -45,6 +45,9 @@ class PesananLaundryController extends Controller
 
         DB::transaction(function () use ($data) {
 
+            // Ambil harga saat ini dari service
+            $hargaSekarang = (int) Service::whereKey($data['service_id'])->value('harga_service');
+
             // 1) Simpan pesanan
             $pesanan = PesananLaundry::create([
                 'service_id'           => $data['service_id'],
@@ -53,6 +56,7 @@ class PesananLaundryController extends Controller
                 'qty'                  => (int) $data['qty'],
                 'admin_id'             => Auth::id(),
                 'metode_pembayaran_id' => $data['metode_pembayaran_id'],
+                'harga_satuan'         => $hargaSekarang, // 🔥 kunci harga saat dibuat
             ]);
 
             // 2) Simpan status awal
@@ -60,17 +64,16 @@ class PesananLaundryController extends Controller
                 'keterangan' => $data['status_awal'],
             ]);
 
-            // 3) Buat rekap otomatis dari pesanan
-            $harga = (int) Service::whereKey($pesanan->service_id)->value('harga_service');
-
+            // 3) Buat rekap otomatis dari pesanan (pakai harga_satuan)
             Rekap::firstOrCreate(
                 ['pesanan_laundry_id' => $pesanan->id],
                 [
                     'service_id'           => $pesanan->service_id,
-                    'metode_pembayaran_id' => $pesanan->metode_pembayaran_id, // bisa bon/tunai/qris
+                    'metode_pembayaran_id' => $pesanan->metode_pembayaran_id,
                     'qty'                  => $pesanan->qty,
-                    'subtotal'             => $harga,
-                    'total'                => $harga * $pesanan->qty,
+                    'harga_satuan'         => $pesanan->harga_satuan,          // ✅ simpan juga di rekap
+                    'subtotal'             => $pesanan->harga_satuan,
+                    'total'                => $pesanan->harga_satuan * $pesanan->qty,
                     'keterangan'           => 'Omset dari pesanan',
                 ]
             );
@@ -89,12 +92,17 @@ class PesananLaundryController extends Controller
             'metode_pembayaran_id' => 'required|exists:metode_pembayaran,id',
         ]);
 
-        $pesanan->update($data);
+        // ❗ harga_satuan tidak diubah agar historis tetap
+        $pesanan->update([
+            'nama_pel'             => $data['nama_pel'],
+            'no_hp_pel'            => $data['no_hp_pel'],
+            'service_id'           => $data['service_id'],
+            'qty'                  => (int) $data['qty'],
+            'metode_pembayaran_id' => $data['metode_pembayaran_id'],
+            // 'harga_satuan' tidak disentuh
+        ]);
 
-        // Catatan: rekap tidak diubah di sini agar tidak dobel.
-        // Jika kamu sudah menambahkan kolom 'pesanan_laundry_id' di tabel rekap,
-        // kamu bisa cari & update baris rekap terkait di sini.
-
+        // Rekap tidak diubah agar data historis stabil
         return back()->with('ok', 'Pesanan berhasil diperbarui.');
     }
 

@@ -95,17 +95,17 @@ class RekapController extends Controller
 
             // --- SETRIKA ---
             if (str_contains($name, 'cuci setrika express 3kg')) {
-                $setrikaKgTotal += 3 * $qty;      // ⬅️ tambahkan kg
+                $setrikaKgTotal += 3 * $qty;
                 $feeSetrika     += 3000 * $qty;
                 continue;
             }
             if (str_contains($name, 'cuci setrika express 5kg')) {
-                $setrikaKgTotal += 5 * $qty;      // ⬅️ tambahkan kg
+                $setrikaKgTotal += 5 * $qty;
                 $feeSetrika     += 5000 * $qty;
                 continue;
             }
             if (str_contains($name, 'cuci setrika express 7kg')) {
-                $setrikaKgTotal += 7 * $qty;      // ⬅️ tambahkan kg
+                $setrikaKgTotal += 7 * $qty;
                 $feeSetrika     += 7000 * $qty;
                 continue;
             }
@@ -118,9 +118,7 @@ class RekapController extends Controller
         }
 
         // ---- Carry-over lipat----
-        // total KG lipat sampai akhir H (untuk sisa setelah H)
         $lipatToEnd = $this->sumKgLipatUntil($end);
-        // total KG lipat sampai akhir H-1 (untuk hitung terbayar hari ini)
         $lipatToPrevEnd = $this->sumKgLipatUntil($start->copy()->subSecond()); // sebelum start
 
         $sisaLipatBaru     = $lipatToEnd % 7;
@@ -131,33 +129,34 @@ class RekapController extends Controller
 
         // ==================== Ringkasan angka untuk kartu di atas ======================================
         // === RINGKASAN CASH (AKUMULASI s.d. $end) ===
-        // Masuk tunai kumulatif
         $cashMasukTunaiCum = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $end)
             ->sum('total');
 
-        // Keluar tunai kumulatif
         $cashKeluarTunaiCum = Rekap::whereNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $end)
             ->sum('total');
 
         // Pesanan tunai yang belum pernah dicatat ke rekap (fallback), kumulatif
+        // 🔒 pakai harga terkunci
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->where('pesanan_laundry.created_at', '<=', $end)
-            ->whereNotNull('pesanan_laundry.paid_at') // ← ganti
-            ->where('pesanan_laundry.paid_at', '<=', $end) // ← ganti
+            ->whereNotNull('pesanan_laundry.paid_at')
+            ->where('pesanan_laundry.paid_at', '<=', $end)
             ->where(function($q) use ($idTunai) {
                 $q->whereNull('rekap.id')
                   ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
             })
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
-        // === FEE KUMULATIF s.d. $end (untuk mengurangi saldo kas akumulasi) ===
+        // === FEE KUMULATIF s.d. $end
         $rowsToEnd = Rekap::with('service')
             ->whereNotNull('service_id')
             ->where('created_at', '<=', $end)
@@ -188,21 +187,22 @@ class RekapController extends Controller
         // === SALDO KAS (AKUMULASI as-of $end) ===
         $totalCash = $cashMasukTunaiCum + $extraCashFromBonLunasTunaiCum - $cashKeluarTunaiCum - $totalFeeCum;
 
-        // Piutang = bon
+        // Piutang = bon  🔒 pakai harga terkunci
         $totalPiutang = PesananLaundry::query()
             ->join('services','services.id','=','pesanan_laundry.service_id')
             ->where('pesanan_laundry.created_at','<=',$end)
             ->where(function ($q) use ($idBon, $end) {
-                // MASIH BON per $end
                 $q->where(function ($qq) use ($idBon, $end) {
-                    $qq->where('pesanan_laundry.metode_pembayaran_id', $idBon)            // statusnya bon
-                       ->orWhere(function ($qqq) use ($end) {                              // sekarang sudah lunas
-                           $qqq->whereNotNull('pesanan_laundry.paid_at')                  // tapi
-                               ->where('pesanan_laundry.paid_at','>', $end);              // pelunasannya SETELAH $end
+                    $qq->where('pesanan_laundry.metode_pembayaran_id', $idBon)
+                       ->orWhere(function ($qqq) use ($end) {
+                           $qqq->whereNotNull('pesanan_laundry.paid_at')
+                               ->where('pesanan_laundry.paid_at','>', $end);
                        });
                 });
             })
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         // -------------------------------------------------------
 
@@ -215,31 +215,25 @@ class RekapController extends Controller
         $bon = PesananLaundry::with(['service','metode'])
             ->where('created_at', '<=', $end)
             ->where(function ($q) use ($idBon, $idTunai, $idQris, $start, $end) {
-
-                // 1) As-of $end MASIH BON
                 $q->where(function ($qq) use ($idBon, $end) {
-                    $qq->where('metode_pembayaran_id', $idBon)                 // masih bon saat ini
-                        ->orWhere(function ($qqq) use ($end) {                  // sekarang sudah lunas,
-                            $qqq->whereNotNull('paid_at')                       // tapi pelunasannya SETELAH $end
+                    $qq->where('metode_pembayaran_id', $idBon)
+                        ->orWhere(function ($qqq) use ($end) {
+                            $qqq->whereNotNull('paid_at')
                                 ->where('paid_at', '>', $end);
                         });
                 })
-
-                // 2) DIBAYAR PADA TANGGAL YANG DILIHAT ($start..$end)
-                //    TAPI pastikan pesanan SUDAH ADA sebelum hari ini
-                //    (kalau dibuat dan langsung tunai/qris hari ini, JANGAN tampil)
                 ->orWhere(function ($qq) use ($idTunai, $idQris, $start, $end) {
                     $qq->where('created_at', '<', $start)
-                        ->whereBetween('paid_at', [$start, $end])              // ← ganti
+                        ->whereBetween('paid_at', [$start, $end])
                         ->whereIn('metode_pembayaran_id', [$idTunai, $idQris]);
                 });
             })
             ->latest('created_at')
             ->paginate(20, ['*'], 'bon');
 
-        // === KARTU TAP (menggunakan catatan terakhir sebelum hari terpilih) ===
-        $CAP     = 5_000_000;  // saldo maksimum setelah isi ulang
-        $PER_TAP = 10_000;     // pengurangan per 1 tap
+        // === KARTU TAP ===
+        $CAP     = 5_000_000;
+        $PER_TAP = 10_000;
 
         $saldoRowDay = SaldoKartu::whereBetween('created_at', [$start, $end])
             ->latest('id')
@@ -249,60 +243,40 @@ class RekapController extends Controller
             ->latest('id')
             ->first();
 
-        $saldoKartu = $saldoRowDay ? (int) $saldoRowDay->saldo_baru : null;
-        $tapGagalHariIni = (int) ($saldoRowDay?->tap_gagal ?? 0);
+        $saldoPrev = $saldoRowPrev
+        ? max(0, min($CAP, (int) $saldoRowPrev->saldo_baru))
+        : null;
 
-        // ====== HITUNG TOTAL TAP HARI INI ======
+        $saldoKartu      = $saldoRowDay ? (int) $saldoRowDay->saldo_baru : null;
+        $tapGagalHariIni = (int) ($saldoRowDay?->tap_gagal ?? 0);
         $totalTapHariIni = 0;
 
-        if ($saldoRowDay && $saldoRowPrev) {
-            // Ada data hari ini & ada data sebelumnya → pakai selisih saldo (auto)
-            $saldoToday = max(0, min($CAP, (int)$saldoRowDay->saldo_baru));
-            $saldoPrev  = max(0, min($CAP, (int)$saldoRowPrev->saldo_baru));
-
-            if ($saldoToday <= $saldoPrev) {
-                // Tidak ada isi ulang (no wrap)
-                $totalTapHariIni = intdiv($saldoPrev - $saldoToday, $PER_TAP);
-            } else {
-                // Ada isi ulang ke CAP (wrap)
-                $totalTapHariIni = intdiv($saldoPrev, $PER_TAP) + intdiv($CAP - $saldoToday, $PER_TAP);
-            }
-
-        } elseif ($saldoRowDay && !$saldoRowPrev) {
-            // Ini hari pertama/awal banget → pakai MODE MANUAL kalau ada
-            $manualTap   = $saldoRowDay->total_tap_manual;   // nullable
-            $manualAwal  = $saldoRowDay->saldo_awal_manual;  // nullable
-
-            if ($manualTap !== null) {
-                // 1) Prioritas: kalau user isi TOTAL TAP manual → pakai langsung
-                $totalTapHariIni = max(0, (int)$manualTap);
-
-            } elseif ($manualAwal !== null) {
-                // 2) Atau, kalau user isi SALDO AWAL manual → hitung selisih ke saldo_baru
-                $saldoAwal = max(0, min($CAP, (int)$manualAwal));
-                $saldoAkhir = max(0, min($CAP, (int)$saldoRowDay->saldo_baru));
-
-                if ($saldoAwal >= $saldoAkhir) {
-                    // Tidak ada wrap dalam 1 hari pertama
-                    $totalTapHariIni = intdiv($saldoAwal - $saldoAkhir, $PER_TAP);
+        if ($saldoRowDay) {
+            // Ambil dari input manual kalau ada
+            if (!is_null($saldoRowDay->manual_total_tap) && $saldoRowDay->manual_total_tap > 0) {
+                $totalTapHariIni = (int) $saldoRowDay->manual_total_tap;
+            } elseif ($saldoRowPrev) {
+                // Kalau nggak ada input manual, hitung otomatis
+                $saldoToday = max(0, min($CAP, (int)$saldoRowDay->saldo_baru));
+                $saldoPrev  = max(0, min($CAP, (int)$saldoRowPrev->saldo_baru));
+        
+                if ($saldoToday <= $saldoPrev) {
+                    $totalTapHariIni = intdiv($saldoPrev - $saldoToday, $PER_TAP);
                 } else {
-                    // Kalau mau dukung wrap di hari pertama: asumsikan sempat isi ulang ke CAP
-                    $totalTapHariIni = intdiv($saldoAwal, $PER_TAP) + intdiv($CAP - $saldoAkhir, $PER_TAP);
+                    $totalTapHariIni = intdiv($saldoPrev, $PER_TAP) + intdiv($CAP - $saldoToday, $PER_TAP);
                 }
-            } else {
-                // 3) Tidak ada data manual sama sekali → biarkan 0 (atau buat default lain kalau mau)
-                $totalTapHariIni = 0;
             }
-        } else {
-            // Tidak ada input hari ini → tetap 0
-            $totalTapHariIni = 0;
-        }
+        }        
+
+        $totalTapHariIni = max(0, $totalTapHariIni);
+
+        // cek apakah ada saldo kemarin (untuk menentukan apakah form manual ditampilkan)
+        $adaSaldoKemarin = \App\Models\SaldoKartu::where('created_at', '<', $start)->exists();
 
         // Total Omzet bersih dan kotor Hari Ini
         $totalOmzetKotorHariIni = Rekap::whereNotNull('service_id')
             ->whereBetween('created_at', [$start, $end])
             ->sum('total');
-        // sudah dikurang dengan fee
         $totalOmzetBersihHariIni = max(0, $totalOmzetKotorHariIni - $totalFee);
 
         $totalTunaiHariIni = Rekap::whereNotNull('service_id')
@@ -315,9 +289,7 @@ class RekapController extends Controller
             ->whereBetween('created_at', [$start, $end])
             ->sum('total');
 
-        // === BREAKDOWN TAMBAHAN UNTUK KETERANGAN DI KARTU ===
-
-        // ---- Saldo Cash KEMARIN (as-of $prevEnd) ----
+        // === BREAKDOWN TAMBAHAN (pakai harga terkunci) ===
         $cashMasukTunaiCumPrev = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $prevEnd)
@@ -333,13 +305,15 @@ class RekapController extends Controller
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->where('pesanan_laundry.created_at', '<=', $prevEnd)
-            ->whereNotNull('pesanan_laundry.paid_at') // ← ganti
-            ->where('pesanan_laundry.paid_at', '<=', $prevEnd) // ← ganti
+            ->whereNotNull('pesanan_laundry.paid_at')
+            ->where('pesanan_laundry.paid_at', '<=', $prevEnd)
             ->where(function($q) use ($idTunai) {
                 $q->whereNull('rekap.id')
                   ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
             })
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         // FEE s.d. H-1
         $rowsToPrevEnd = Rekap::with('service')
@@ -367,10 +341,9 @@ class RekapController extends Controller
         $feeLipatCumPrev = intdiv($kgLipatTotalCumPrev, 7) * 3000;
         $totalFeeCumPrev = $feeLipatCumPrev + $feeSetrikaCumPrev;
 
-        // SALDO CASH KEMARIN
         $saldoCashKemarin = $cashMasukTunaiCumPrev + $extraCashFromBonLunasTunaiCumPrev - $cashKeluarTunaiCumPrev - $totalFeeCumPrev;
 
-        // ---- Mutasi CASH HARI INI ----
+        // ---- Mutasi CASH HARI INI (pakai harga terkunci) ----
         $penjualanTunaiHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->whereBetween('created_at', [$start, $end])
@@ -379,42 +352,50 @@ class RekapController extends Controller
         $pelunasanBonTunaiHariIni = PesananLaundry::query()
             ->join('services','services.id','=','pesanan_laundry.service_id')
             ->where('pesanan_laundry.created_at','<',$start)
-            ->whereBetween('pesanan_laundry.paid_at', [$start, $end]) // ← ganti
+            ->whereBetween('pesanan_laundry.paid_at', [$start, $end])
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         $pengeluaranTunaiHariIni = Rekap::whereNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->whereBetween('created_at', [$start, $end])
             ->sum('total');
 
-        // ---- Breakdown BON: kemarin + masuk – dilunasi ----
+        // ---- BON breakdown (pakai harga terkunci) ----
         $bonKemarin = PesananLaundry::query()
             ->join('services','services.id','=','pesanan_laundry.service_id')
             ->where('pesanan_laundry.created_at', '<=', $prevEnd)
             ->where(function ($q) use ($prevEnd, $idBon, $idTunai, $idQris) {
                 $q->where('pesanan_laundry.metode_pembayaran_id', $idBon)
                   ->orWhere(function ($qq) use ($prevEnd) {
-                      $qq->whereNotNull('pesanan_laundry.paid_at')          // ← ganti
-                         ->where('pesanan_laundry.paid_at', '>', $prevEnd);  // ← ganti
+                      $qq->whereNotNull('pesanan_laundry.paid_at')
+                         ->where('pesanan_laundry.paid_at', '>', $prevEnd);
                   });
             })
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         $bonMasukHariIni = PesananLaundry::query()
             ->join('services','services.id','=','pesanan_laundry.service_id')
             ->whereBetween('pesanan_laundry.created_at', [$start, $end])
             ->where('pesanan_laundry.metode_pembayaran_id', $idBon)
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         $bonDilunasiHariIni = PesananLaundry::query()
             ->join('services','services.id','=','pesanan_laundry.service_id')
             ->where('pesanan_laundry.created_at','<',$start)
-            ->whereBetween('pesanan_laundry.paid_at', [$start, $end]) // ← ganti
+            ->whereBetween('pesanan_laundry.paid_at', [$start, $end])
             ->whereIn('pesanan_laundry.metode_pembayaran_id', [$idTunai, $idQris])
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * IFNULL(services.harga_service,0)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
-        // Bon yang tercatat di rekap HARI INI (untuk keterangan Omzet)
+        // Bon yang tercatat di rekap HARI INI
         $totalBonHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idBon)
             ->whereBetween('created_at', [$start, $end])
@@ -455,6 +436,8 @@ class RekapController extends Controller
             'bonMasukHariIni',
             'bonDilunasiHariIni',
             'totalBonHariIni',
+            'adaSaldoKemarin',
+            'saldoPrev',
         ));
     }
 
@@ -473,7 +456,6 @@ class RekapController extends Controller
                 $subtotal  = (int)($row['subtotal'] ?? 0);
                 $total     = (int)($row['total'] ?? 0);
 
-                // Anggap "kosong" jika belum pilih layanan ATAU qty/total/subtotal 0
                 if (!$serviceId || $qty <= 0 || $subtotal <= 0 || $total <= 0) {
                     continue;
                 }
@@ -481,7 +463,6 @@ class RekapController extends Controller
                 $rows[] = compact('serviceId','metodeId','qty','subtotal','total');
             }
 
-            // 2) Tidak ada baris valid? batal
             if (count($rows) === 0) {
                 return back()
                     ->withInput()
@@ -501,6 +482,7 @@ class RekapController extends Controller
                         'service_id'            => $row['serviceId'],
                         'metode_pembayaran_id'  => $row['metodeId'],
                         'qty'                   => $row['qty'],
+                        'harga_satuan'          => $row['subtotal'], // 🔒 kunci unit price dari form
                         'subtotal'              => $row['subtotal'],
                         'total'                 => $row['total'],
                     ]);
@@ -516,110 +498,67 @@ class RekapController extends Controller
         }
     }
 
-    public function input()
+    public function input(Request $r)
     {
         $services = Service::all();
         $metodes  = MetodePembayaran::all();
-
-        // === Flag "hari pertama" untuk saldo kartu ===
-        $todayStart = today()->startOfDay();
-
-        // sudah pernah ada catatan sebelum hari ini?
-        $hasPrev = SaldoKartu::where('created_at', '<', $todayStart)->exists();
-
-        // kalau belum pernah ada histori sama sekali -> butuh field manual
-        $needsManualTap = !$hasPrev;
-
-        return view('admin.rekap.input', compact('services', 'metodes', 'needsManualTap'));
-    }
+    
+        $day   = $r->query('d') ? \Carbon\Carbon::parse($r->query('d')) : today();
+        $start = $day->copy()->startOfDay();
+    
+        // "Hari pertama" = tidak ada saldo sebelum tanggal konteks
+        $hasPrev = SaldoKartu::where('created_at', '<', $start)->exists();
+        $adaSaldoKemarin = $hasPrev;
+    
+        return view('admin.rekap.input', compact('services', 'metodes', 'adaSaldoKemarin', 'day'));
+    }    
 
     public function storeSaldo(Request $request)
     {
-        // Deteksi “hari pertama” (belum ada catatan sebelum hari ini)
-        $isFirstDay = !SaldoKartu::where('created_at', '<', today()->startOfDay())->exists();
-
-        // ===== Validasi dinamis =====
+        $isFirstDay = !SaldoKartu::whereDate('created_at', '<', today())->exists();
+    
         $rules = [
             'tap_gagal' => ['required','integer','min:0'],
         ];
-
+    
         if ($isFirstDay) {
-            // Hari pertama → boleh pakai input manual
-            $rules['saldo_kartu'] = ['nullable','integer','min:0','max:5000000'];
-            $rules['total_tap']   = ['nullable','integer','min:0'];
-            $rules['saldo_awal']  = ['nullable','integer','min:0','max:5000000'];
+            $rules['saldo_kartu']       = ['nullable','integer','min:0','max:5000000'];
+            $rules['manual_total_tap']  = ['nullable','integer','min:0'];
         } else {
-            // Hari biasa → wajib isi saldo akhir
             $rules['saldo_kartu'] = ['required','integer','min:0','max:5000000'];
         }
-
+    
         $data = $request->validate($rules, [], [], 'saldo');
-
-        // ===== Hitung saldo akhir bila perlu (khusus hari pertama) =====
-        $CAP     = 5_000_000;
-        $PER_TAP = 10_000;
-
-        $saldoBaru = array_key_exists('saldo_kartu', $data) ? $data['saldo_kartu'] : null;
-
-        if ($isFirstDay && ($saldoBaru === null || $saldoBaru === '')) {
-            $totalTap  = array_key_exists('total_tap',  $data) ? $data['total_tap']  : null;
-            $saldoAwal = array_key_exists('saldo_awal', $data) ? $data['saldo_awal'] : null;
-
-            if ($totalTap !== null) {
-                // Ada total tap manual → prioritas utama
-                if ($saldoAwal !== null) {
-                    $saldoBaru = max(0, min($CAP, (int)$saldoAwal - (int)$totalTap * $PER_TAP));
-                } else {
-                    // Jika saldo awal tak diisi, asumsikan dari CAP
-                    $saldoBaru = max(0, $CAP - (int)$totalTap * $PER_TAP);
-                }
-            } elseif ($saldoAwal !== null) {
-                // Hanya saldo awal yang diisi → jadikan saldo akhir (fallback aman)
-                $saldoBaru = max(0, min($CAP, (int)$saldoAwal));
-            } else {
-                // Tidak ada apa pun → minta salah satu diisi
-                return back()
-                    ->withInput()
-                    ->withErrors(['saldo_kartu' => 'Isi salah satu: Saldo Akhir (saldo_kartu), Total Tap, atau Saldo Awal.'], 'saldo');
-            }
-        }
-
-        // ===== Payload simpan =====
+    
         $payload = [
-            'saldo_baru'        => (int) $saldoBaru,
+            'saldo_baru'        => (int) ($data['saldo_kartu'] ?? 0),
             'tap_gagal'         => (int) ($data['tap_gagal'] ?? 0),
-            // simpan input manual bila ada (nullable kolomnya)
-            'total_tap_manual'  => array_key_exists('total_tap',  $data) ? $data['total_tap']  : null,
-            'saldo_awal_manual' => array_key_exists('saldo_awal', $data) ? $data['saldo_awal'] : null,
+            'manual_total_tap'  => $isFirstDay ? ($data['manual_total_tap'] ?? null) : null,
         ];
-
+    
         try {
-            // 1) Transaction + lock baris hari ini
             DB::transaction(function () use ($payload) {
-                $row = SaldoKartu::whereDate('created_at', today())
-                    ->lockForUpdate()
-                    ->first();
-
+                $row = SaldoKartu::whereDate('created_at', today())->lockForUpdate()->first();
+    
                 if ($row) {
                     $row->update($payload);
                 } else {
-                    SaldoKartu::create($payload); // created_at = now()
+                    SaldoKartu::create($payload);
                 }
-            }, 3);
-
+            });
+    
             return back()->with('ok', 'Saldo kartu berhasil disimpan.');
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             Log::error('[storeSaldo] Gagal simpan saldo kartu', [
                 'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
             ]);
-
+    
             return back()
                 ->withInput()
-                ->withErrors(['storeSaldo' => 'Terjadi kesalahan saat menyimpan saldo. Silakan coba lagi.'], 'saldo');
+                ->withErrors(['storeSaldo' => 'Terjadi kesalahan saat menyimpan saldo.'], 'saldo');
         }
-    }
-
+    }    
+        
     public function destroy(Rekap $rekap)
     {
         $rekap->delete();
@@ -645,7 +584,6 @@ class RekapController extends Controller
         try {
             $raw = $r->input('outs', []);
 
-            // 1) Normalisasi & filter: baris valid = ada nominal > 0 (keterangan/metode opsional)
             $rows = [];
             foreach ($raw as $row) {
                 $ket     = trim((string)($row['keterangan'] ?? ''));
@@ -653,7 +591,7 @@ class RekapController extends Controller
                 $tanggal = $row['tanggal'] ?? null;
                 $metode  = $row['metode_pembayaran_id'] ?? null;
 
-                if ($subtotal <= 0) continue; // kosong → skip
+                if ($subtotal <= 0) continue;
 
                 $rows[] = [
                     'keterangan' => $ket,
@@ -669,12 +607,10 @@ class RekapController extends Controller
                     ->withErrors(['outs' => 'Tidak ada baris pengeluaran yang valid. Isi nominal (> 0).'], 'pengeluaran');
             }
 
-            // 2) Validasi id metode (jika diisi)
             $r->validate([
                 'outs.*.metode_pembayaran_id' => ['nullable','exists:metode_pembayaran,id'],
             ]);
 
-            // 3) Simpan transaksi
             DB::transaction(function () use ($rows) {
                 foreach ($rows as $row) {
                     Rekap::create([
@@ -706,37 +642,30 @@ class RekapController extends Controller
             'metode' => ['required', 'in:bon,tunai,qris'],
         ]);
 
-        // map nama -> id
         $map   = MetodePembayaran::pluck('id', 'nama');
         $newId = $map[$r->metode] ?? null;
         if (!$newId) {
             return back()->withErrors(['metode' => 'Metode tidak valid.']);
         }
 
-        // ----- MINIMAL CHANGE: set/reset paid_at saat ganti metode -----
         $idBon   = $map['bon']  ?? null;
         $idTunai = $map['tunai']?? null;
         $idQris  = $map['qris'] ?? null;
         $oldId   = $pesanan->metode_pembayaran_id;
 
         DB::transaction(function () use ($pesanan, $newId, $oldId, $idBon, $idTunai, $idQris) {
-            // 1) update metode di pesanan
             $pesanan->update(['metode_pembayaran_id' => $newId]);
 
-            // 2) Jika Bon -> (Tunai/Qris) set paid_at sekarang (kalau belum)
             if ($oldId === $idBon && in_array($newId, [$idTunai, $idQris], true)) {
                 if (is_null($pesanan->paid_at)) {
                     $pesanan->update(['paid_at' => now()]);
                 }
             }
 
-            // 3) Jika (Tunai/Qris) -> Bon, kosongkan paid_at (supaya tidak dihitung lunas)
             if (in_array($oldId, [$idTunai, $idQris], true) && $newId === $idBon) {
                 $pesanan->update(['paid_at' => null]);
             }
 
-            // 4) Jika perubahan terjadi DI HARI YANG SAMA dengan created_at pesanan,
-            //    ikutkan sinkronisasi ke REKAP yang TER-LINK (metode-nya).
             $todayStart = now()->startOfDay();
             $todayEnd   = now()->endOfDay();
             if ($pesanan->created_at->between($todayStart, $todayEnd)) {

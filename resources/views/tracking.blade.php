@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <style>[x-cloak]{display:none !important}</style>
   {!! NoCaptcha::renderJs('id') !!}
+  <link rel="icon" href="{{ asset('images/favicon.ico') }}" type="image/x-icon">
 </head>
 
 <body class="min-h-screen flex flex-col font-sans text-gray-800 bg-white">

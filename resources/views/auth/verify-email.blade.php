@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verifikasi Email - Qxpress Laundry</title>
   @vite(['resources/css/app.css','resources/js/app.js'])
+  <link rel="icon" href="{{ asset('images/favicon.ico') }}" type="image/x-icon">
 </head>
 <body class="font-sans text-gray-800 bg-[#f5f8ff]">
   <main class="min-h-screen grid place-items-center p-4">

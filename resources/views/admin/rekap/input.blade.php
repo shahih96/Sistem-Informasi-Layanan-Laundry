@@ -11,7 +11,13 @@
 @section('content')
   <div class="flex items-center justify-between">
     <div class="text-xl md:text-2xl font-bold">Input rekap keuangan – Qxpress Laundry</div>
-    <a href="{{ route('admin.rekap.index') }}" class="text-sm underline">Kembali</a>
+    <a href="{{ route('admin.rekap.index') }}"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 hover:shadow transition-all duration-150">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+      Kembali
+    </a>
   </div>
 
   {{-- ======================= FORM OMSET ======================= --}}
@@ -80,9 +86,11 @@
               {{-- Metode --}}
               <td class="px-3 py-2 text-center">
                 <select class="border rounded px-2 py-1"
-                        :name="`rows[${idx}][metode_pembayaran_id]`" x-model="r.metode_pembayaran_id">
+                        :name="`outs[${idx}][metode_pembayaran_id]`" x-model="r.metode_pembayaran_id">
                   @foreach($metodes as $m)
-                    <option value="{{ $m->id }}">{{ $m->nama }}</option>
+                    @if(strtolower($m->nama) !== 'bon')
+                      <option value="{{ $m->id }}">{{ $m->nama }}</option>
+                    @endif
                   @endforeach
                 </select>
               </td>
@@ -92,7 +100,7 @@
                   x-text="formatRupiah(r.qty * unitPrice(r.service_id))"></td>
 
               <td class="px-3 py-2 text-right">
-                <button type="button" class="text-xs underline text-red-600" @click="remove(idx)">hapus</button>
+                <button type="button" class="px-3 py-1 text-xs rounded bg-red-600 text-white" @click="remove(idx)">hapus</button>
               </td>
             </tr>
           </template>
@@ -106,7 +114,7 @@
       {{-- Submit --}}
       <form method="POST" action="{{ route('admin.rekap.store') }}">
         @csrf
-
+        <input type="hidden" name="d" value="{{ request('d', now()->toDateString()) }}">
         {{-- mirror SEMUA field yang dibutuhkan controller --}}
         <template x-for="(r,idx) in rows" :key="'h'+idx">
           <div class="hidden">
@@ -188,7 +196,7 @@
               </td>
 
               <td class="px-3 py-2 text-right">
-                <button type="button" class="text-xs underline text-red-600" @click="remove(idx)">hapus</button>
+                <button type="button" class="px-3 py-1 text-xs rounded bg-red-600 text-white" @click="remove(idx)">hapus</button>
               </td>
             </tr>
           </template>
@@ -200,7 +208,7 @@
       <button type="button" class="text-sm underline" @click="add()">+ Tambah Baris</button>
       <form method="POST" action="{{ route('admin.rekap.store-pengeluaran') }}">
         @csrf
-
+        <input type="hidden" name="d" value="{{ request('d', now()->toDateString()) }}">
         {{-- mirror SEMUA field yang dibutuhkan controller --}}
         <template x-for="(r,idx) in rows" :key="'ph'+idx">
           <div class="hidden">
@@ -234,16 +242,24 @@
       </div>
     @endif
 
+    @php
+      // misal di controller kamu sudah kirim $adaSaldoKemarin = true/false
+      // default ke false biar tetap aman kalau variabel belum dikirim
+      $adaSaldoKemarin = $adaSaldoKemarin ?? false;
+    @endphp
+
     <form id="form-saldo-kartu" method="POST" action="{{ route('admin.rekap.store-saldo') }}" class="grid md:grid-cols-3 gap-3">
       @csrf
+      <input type="hidden" name="d" value="{{ request('d', now()->toDateString()) }}">
+      {{-- 1. Sisa Saldo --}}
       <div>
         <label class="text-sm">Sisa saldo kartu hari ini (Rp.)</label>
         <div class="relative mt-1">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
           <input id="saldo_kartu_display" type="text" inputmode="numeric" autocomplete="off"
-                 class="w-full border rounded px-3 py-2 pl-9"
-                 value="{{ old('saldo_kartu') ? number_format((int)old('saldo_kartu'),0,',','.') : '' }}"
-                 aria-label="Sisa saldo kartu (contoh: 4.000.000)">
+                class="w-full border rounded px-3 py-2 pl-9"
+                value="{{ old('saldo_kartu') ? number_format((int)old('saldo_kartu'),0,',','.') : '' }}"
+                aria-label="Sisa saldo kartu (contoh: 4.000.000)">
           <input id="saldo_kartu" name="saldo_kartu" type="hidden" value="{{ old('saldo_kartu') }}">
         </div>
         @error('saldo_kartu')
@@ -251,21 +267,44 @@
         @enderror
       </div>
 
+      {{-- 2. Tampilkan input total tap hanya kalau belum ada saldo sebelumnya --}}
+      @if (!$adaSaldoKemarin)
+        <div>
+          <label class="text-sm">Total Tap Kartu Hari Ini (Jumlah)</label>
+          <input
+            name="manual_total_tap"
+            type="text"
+            inputmode="numeric"
+            pattern="\d*"
+            autocomplete="off"
+            class="w-full border rounded px-3 py-2 mt-1"
+            value="{{ old('manual_total_tap', 0) }}"
+          >
+          @error('manual_total_tap', 'saldo')
+            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+          @enderror
+        </div>
+      @endif
+
+      {{-- 3. Jumlah Tap Gagal --}}
       <div>
-        <label class="text-sm">Jumlah Tap Gagal</label>
+        <label class="text-sm">Jumlah Tap Gagal (Jumlah)</label>
         <input name="tap_gagal" type="text" inputmode="numeric" pattern="\d*"
-               autocomplete="off" class="w-full border rounded px-3 py-2"
-               value="{{ old('tap_gagal', 0) }}">
+              autocomplete="off" class="w-full border rounded px-3 py-2"
+              value="{{ old('tap_gagal', 0) }}">
         @error('tap_gagal')
           <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
         @enderror
       </div>
 
       <div class="flex items-end">
-        <button class="w-full md:w-auto px-5 py-3 rounded-lg bg-gray-800 text-white">Submit Saldo Kartu</button>
+        <button class="w-full md:w-auto px-5 py-3 rounded-lg bg-gray-800 text-white">
+          Submit Saldo Kartu
+        </button>
       </div>
     </form>
   </section>
+
 
   {{-- ======================= SCRIPTS ======================= --}}
   <script>

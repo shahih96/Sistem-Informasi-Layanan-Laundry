@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Rekap extends Model {
     protected $table = 'rekap';
-    protected $fillable = ['pesanan_laundry_id','service_id','metode_pembayaran_id','bon_id','saldo_kas_id','fee_id','qty','subtotal','total','keterangan'];
+    protected $fillable = ['pesanan_laundry_id','service_id','metode_pembayaran_id','bon_id','saldo_kas_id','fee_id','qty','subtotal','total','keterangan','harga_satuan'];
 
     public function service(){ return $this->belongsTo(Service::class); }
     public function metode(){ return $this->belongsTo(MetodePembayaran::class,'metode_pembayaran_id'); }

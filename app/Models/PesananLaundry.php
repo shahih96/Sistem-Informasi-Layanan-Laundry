@@ -13,7 +13,7 @@ class PesananLaundry extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'service_id','nama_pel','no_hp_pel','admin_id','qty','metode_pembayaran_id','is_hidden'
+        'service_id','nama_pel','no_hp_pel','admin_id','qty','metode_pembayaran_id','is_hidden','harga_satuan'
     ];
 
     protected $casts = [
