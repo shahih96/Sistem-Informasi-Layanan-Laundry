@@ -16,20 +16,20 @@ class PesananLaundryController extends Controller
     public function index()
     {
         $pesanan  = PesananLaundry::with([
-                        'service',
-                        'metode',                                 
-                        'statuses' => fn($q) => $q->latest(),
-                    ])->latest()->paginate(5);
+            'service',
+            'metode',
+            'statuses' => fn($q) => $q->latest(),
+        ])->latest()->paginate(5);
 
         $services = Service::orderBy('nama_service')->get();
         $metodes  = MetodePembayaran::orderBy('id')->get();
-        $pelangganOptions = PesananLaundry::select('nama_pel','no_hp_pel')
-            ->groupBy('nama_pel','no_hp_pel')
+        $pelangganOptions = PesananLaundry::select('nama_pel', 'no_hp_pel')
+            ->groupBy('nama_pel', 'no_hp_pel')
             ->orderBy('nama_pel')
-            ->limit(500) 
+            ->limit(500)
             ->get();
 
-        return view('admin.pesanan.index', compact('pesanan','services','metodes','pelangganOptions'));
+        return view('admin.pesanan.index', compact('pesanan', 'services', 'metodes', 'pelangganOptions'));
     }
 
     public function store(Request $r)
@@ -110,5 +110,5 @@ class PesananLaundryController extends Controller
     {
         $pesanan->update(['is_hidden' => true]);
         return back()->with('ok', 'Pesanan disembunyikan dari halaman tracking.');
-    }    
+    }
 }
