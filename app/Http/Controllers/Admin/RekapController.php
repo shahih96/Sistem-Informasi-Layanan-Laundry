@@ -297,6 +297,13 @@ class RekapController extends Controller
             ->whereHas('service', fn($q) => $q->where('is_fee_service', 1))
             ->sum('total');
 
+        // AJ dibayar QRIS s.d. H-1 (≤ prevEnd)
+        $ajQrisCumPrev = Rekap::whereNotNull('service_id')
+            ->where('metode_pembayaran_id', $idQris)
+            ->where('created_at', '<=', $prevEnd)
+            ->whereHas('service', fn($q) => $q->where('is_fee_service', 1))
+            ->sum('total');
+
         // Kas “disesuaikan” = kas tunai murni - AJ-QRIS (karena disalurkan ke kurir)
         $totalCashAdj = $totalCash - $ajQrisCum;
 
@@ -504,7 +511,7 @@ class RekapController extends Controller
         $feeLainCumPrev  = $feeBedCoverCumPrev + $feeHordengCumPrev + $feeBonekaCumPrev + $feeSatuanCumPrev;
         $totalFeeCumPrev = $feeLipatCumPrev + $feeSetrikaCumPrev + $feeLainCumPrev;
 
-        $saldoCashKemarin = $cashMasukTunaiCumPrev + $extraCashFromBonLunasTunaiCumPrev - $cashKeluarTunaiCumPrev - $totalFeeCumPrev;
+        $saldoCashKemarin = $cashMasukTunaiCumPrev + $extraCashFromBonLunasTunaiCumPrev - $cashKeluarTunaiCumPrev - $totalFeeCumPrev - $ajQrisCumPrev;
 
         // ---- Mutasi CASH HARI INI (pakai harga terkunci)
         $penjualanTunaiHariIni = Rekap::whereNotNull('service_id')
@@ -612,6 +619,7 @@ class RekapController extends Controller
             'ajQrisCum',
             'ajQrisHariIni',
             'totalCashAdj',
+            'ajQrisCumPrev',
         ));
     }
 

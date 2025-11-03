@@ -36,7 +36,11 @@
           <th class="px-3 py-2 text-left">Update</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="
+      [&_tr:nth-child(odd)]:bg-slate-50/70
+      [&_tr:nth-child(even)]:bg-white
+      [&_tr:hover]:bg-amber-50/40
+    ">
         @foreach($riwayat as $r)
           <tr class="border-t">
             <td class="px-3 py-2">{{ $r->nama_pel }}</td>
@@ -119,7 +123,7 @@
       <div class="bg-white p-5 rounded-xl shadow flex items-center justify-between">
         <div>
           <div class="text-xs uppercase tracking-wide text-gray-500">Total Cash (s.d. hari ini)</div>
-          <div class="mt-2 text-xl font-bold">Rp {{ number_format($totalCash,0,',','.') }}</div>
+          <div class="mt-2 text-xl font-bold">Rp {{ number_format($totalCashAdj,0,',','.') }}</div>
         </div>
         <svg class="w-8 h-8 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path stroke-width="1.5" d="M3 6h18v12H3zM6 9h12M6 15h6"/>
@@ -169,7 +173,11 @@
             <th class="px-3 py-2 text-right">Total</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="
+        [&_tr:nth-child(odd)]:bg-slate-50/70
+        [&_tr:nth-child(even)]:bg-white
+        [&_tr:hover]:bg-amber-50/40
+      ">
           @forelse($pengeluaranBulanDetail as $row)
             @php
               $isOwnerDraw = str($row->keterangan ?? '')->lower()->contains(['bos','kanjeng','ambil duit','ambil duid','tarik kas','tarik']);

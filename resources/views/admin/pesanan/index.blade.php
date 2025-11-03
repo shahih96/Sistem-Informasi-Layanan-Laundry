@@ -104,7 +104,11 @@
                         <th class="px-3 py-2"></th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="
+                [&_tr:nth-child(odd)]:bg-slate-50/70
+                [&_tr:nth-child(even)]:bg-white
+                [&_tr:hover]:bg-amber-50/40
+              ">
                     @foreach ($pesanan as $p)
                         @php
                             $qty = max(1, (int) ($p->qty ?? 1));

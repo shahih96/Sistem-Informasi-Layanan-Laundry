@@ -19,7 +19,7 @@ class PesananLaundryController extends Controller
             'service',
             'metode',
             'statuses' => fn($q) => $q->latest(),
-        ])->latest()->paginate(5);
+        ])->latest()->paginate(15);
 
         $services = Service::orderBy('nama_service')->get();
         $metodes  = MetodePembayaran::orderBy('id')->get();

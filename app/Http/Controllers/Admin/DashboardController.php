@@ -19,30 +19,33 @@ class DashboardController extends Controller
         $day   = $r->query('d') ? Carbon::parse($r->query('d')) : today();
         $start = $day->copy()->startOfDay();
         $end   = $day->copy()->endOfDay();
+        $prevEnd = $start->copy()->subSecond(); // NEW
+
+        // filter layanan non-fee (exclude AJ)
+        $svcNotFee = function ($q) { $q->where('is_fee_service', false); }; // NEW
 
         $totalPesananHariIni = PesananLaundry::whereBetween('created_at', [$start, $end])->count();
 
+        // Pendapatan (kotor) HARI INI -> EXCLUDE layanan fee (AJ)  // NEW
         $pendapatanHariIni = Rekap::whereNotNull('service_id')
             ->whereBetween('created_at', [$start, $end])
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
-        // ====== FEE HARI INI (dengan kategori lengkap) ======
+        // ====== FEE HARI INI (kategori lengkap) ======
         $rowsToday = Rekap::with('service')
             ->whereNotNull('service_id')
             ->whereBetween('created_at', [$start, $end])
             ->get();
 
-        // Lipat dihitung per 7 Kg -> Rp 3.000 (Bed Cover TIDAK masuk Lipat)
-        $kgLipat = 0;
-
-        // Setrika: 3/5/7 Kg fixed, selebihnya "per kg" = 1.000
+        // Setrika: 3/5/7 kg fixed, sisanya per kg
         $feeSetrika = 0;
 
         // Kategori tambahan (per item)
-        $feeBedCover = 0;         // 3.000 / item
-        $feeHordeng  = 0;         // 3.000 / item (baik kecil max 3 atau besar max 2)
-        $feeBoneka   = 0;         // 1.000 / item (besar atau kecil)
-        $feeSatuan   = 0;         // 1.000 / item
+        $feeBedCover = 0;  // 3.000 / item
+        $feeHordeng  = 0;  // 3.000 / item
+        $feeBoneka   = 0;  // 1.000 / item
+        $feeSatuan   = 0;  // 1.000 / item
 
         foreach ($rowsToday as $row) {
             $qty  = (int)($row->qty ?? 0);
@@ -50,118 +53,72 @@ class DashboardController extends Controller
 
             $name = strtolower($row->service->nama_service ?? '');
 
-            // ---- LIPAT (kg) ----
-            if (str_contains($name, 'lipat') && str_contains($name, '/kg')) {
-                // Bed cover tidak dihitung ke lipat
-                if (!str_contains($name, 'bed cover')) {
-                    $kgLipat += $qty;
-                    continue;
-                }
-            }
+            // SETRIKA EXPRESS (fixed)
+            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrika += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrika += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrika += 7000 * $qty; continue; }
 
-            // ---- LIPAT EXPRESS 7kg (fixed 7kg) ----
-            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) {
-                $kgLipat += 7 * $qty;
-                continue;
-            }
+            // BED COVER / HORDENG / BONEKA / SATUAN
+            if (str_contains($name, 'bed cover'))       { $feeBedCover += 3000 * $qty; continue; }
+            if (str_contains($name, 'hordeng'))         { $feeHordeng  += 3000 * $qty; continue; }
+            if (str_contains($name, 'boneka'))          { $feeBoneka   += 1000 * $qty; continue; }
+            if (str_contains($name, 'satuan'))          { $feeSatuan   += 1000 * $qty; continue; }
 
-            // ---- SETRIKA EXPRESS (fixed) ----
-            if (str_contains($name, 'cuci setrika express 3kg')) {
-                $feeSetrika += 3000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
-                $feeSetrika += 5000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
-                $feeSetrika += 7000 * $qty;
-                continue;
-            }
-
-            // ---- BED COVER (per item) ----
-            if (str_contains($name, 'bed cover')) {
-                $feeBedCover += 3000 * $qty;
-                continue;
-            }
-
-            // ---- HORDENG (per item) ----
-            if (str_contains($name, 'hordeng')) {
-                $feeHordeng += 3000 * $qty;
-                continue;
-            }
-
-            // ---- BONEKA (per item) ----
-            if (str_contains($name, 'boneka')) {
-                $feeBoneka += 1000 * $qty;
-                continue;
-            }
-
-            // ---- SATUAN (per item) ----
-            if (str_contains($name, 'satuan')) {
-                $feeSatuan += 1000 * $qty;
-                continue;
-            }
-
-            // ---- SETRIKA (generic per kg) ----
-            if (str_contains($name, 'setrika')) {
-                $feeSetrika += 1000 * $qty;
-                continue;
-            }
+            // SETRIKA generic per kg
+            if (str_contains($name, 'setrika'))         { $feeSetrika  += 1000 * $qty; continue; }
         }
 
-        $feeLipatHariIni = intdiv($kgLipat, 7) * 3000;
+        // === FEE LIPAT HARI INI pakai carry-over (SAMA dgn RekapController) === // NEW
+        $lipatToEnd     = $this->sumKgLipatUntil($end);
+        $lipatToPrevEnd = $this->sumKgLipatUntil($prevEnd);
+        $feeLipatHariIni = (intdiv($lipatToEnd, 7) - intdiv($lipatToPrevEnd, 7)) * 3000;
+
         $feeTotalHariIni = $feeLipatHariIni + $feeSetrika + $feeBedCover + $feeHordeng + $feeBoneka + $feeSatuan;
+
+        // (Kotor - Fee). Omzet kotor sudah exclude AJ.
         $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni);
 
         // ====== STATUS TERBARU HARI INI ======
-        $latestToday = PesananLaundry::whereHas(
-            'statuses',
-            fn($q) =>
-            $q->whereBetween('created_at', [$start, $end])
-        )
+        $latestToday = PesananLaundry::whereHas('statuses', fn($q) => $q->whereBetween('created_at', [$start, $end]))
             ->with(['statuses' => fn($q) => $q->whereBetween('created_at', [$start, $end])->latest()->limit(1)])
             ->get();
 
-        $pesananDiproses = $latestToday->filter(
-            fn($p) =>
-            strcasecmp(optional($p->statuses->first())->keterangan, 'Diproses') === 0
-        )->count();
+        $pesananDiproses = $latestToday->filter(fn($p) => strcasecmp(optional($p->statuses->first())->keterangan, 'Diproses') === 0)->count();
+        $pesananSelesai  = $latestToday->filter(fn($p) => strcasecmp(optional($p->statuses->first())->keterangan, 'Selesai')  === 0)->count();
 
-        $pesananSelesai = $latestToday->filter(
-            fn($p) =>
-            strcasecmp(optional($p->statuses->first())->keterangan, 'Selesai') === 0
-        )->count();
-
-        $riwayat = PesananLaundry::with(['service', 'statuses' => fn($q) => $q->latest()])
-            ->latest()->take(5)->get();
+        $riwayat = PesananLaundry::with(['service', 'statuses' => fn($q) => $q->latest()])->latest()->take(5)->get();
 
         // ====== TOTAL CASH (akumulasi s.d. $end) ======
         $idTunai = MetodePembayaran::where('nama', 'tunai')->value('id');
+        $idQris  = MetodePembayaran::where('nama', 'qris')->value('id');
 
+        // MASUK tunai (exclude AJ)  // NEW
         $cashMasukTunaiCum = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $end)
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
+        // KELUAR tunai (pengeluaran)
         $cashKeluarTunaiCum = Rekap::whereNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $end)
             ->sum('total');
 
+        // BON lama dilunasi TUNAI hari ini (harga terkunci) – exclude AJ  // NEW
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
+            ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->whereNotNull('pesanan_laundry.paid_at')
             ->where('pesanan_laundry.paid_at', '<=', $end)
             ->where(function ($q) use ($idTunai) {
-                $q->whereNull('rekap.id')
-                    ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
+                $q->whereNull('rekap.id')->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
             })
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
 
-        // ====== FEE KUMULATIF (untuk totalCash) ======
+        // ====== FEE KUMULATIF (untuk totalCash) – sama dengan RekapController ======
         $rowsToEnd = Rekap::with('service')
             ->whereNotNull('service_id')
             ->where('created_at', '<=', $end)
@@ -177,84 +134,48 @@ class DashboardController extends Controller
         foreach ($rowsToEnd as $row) {
             $qty  = (int)($row->qty ?? 0);
             if ($qty <= 0) continue;
-
             $name = strtolower($row->service->nama_service ?? '');
 
-            // Lipat kg (exclude bed cover)
-            if (str_contains($name, 'lipat') && str_contains($name, '/kg') && !str_contains($name, 'bed cover')) {
-                $kgLipatTotalCum += $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) {
-                $kgLipatTotalCum += 7 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'lipat') && str_contains($name, '/kg')) { $kgLipatTotalCum += $qty; continue; }
+            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) { $kgLipatTotalCum += 7 * $qty; continue; }
 
-            // Setrika fixed
-            if (str_contains($name, 'cuci setrika express 3kg')) {
-                $feeSetrikaCum += 3000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
-                $feeSetrikaCum += 5000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
-                $feeSetrikaCum += 7000 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrikaCum += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrikaCum += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrikaCum += 7000 * $qty; continue; }
 
-            // Bed cover (item)
-            if (str_contains($name, 'bed cover')) {
-                $feeBedCoverCum += 3000 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'bed cover')) { $feeBedCoverCum += 3000 * $qty; continue; }
+            if (str_contains($name, 'hordeng'))   { $feeHordengCum  += 3000 * $qty; continue; }
+            if (str_contains($name, 'boneka'))    { $feeBonekaCum   += 1000 * $qty; continue; }
+            if (str_contains($name, 'satuan'))    { $feeSatuanCum   += 1000 * $qty; continue; }
 
-            // Hordeng (item)
-            if (str_contains($name, 'hordeng')) {
-                $feeHordengCum += 3000 * $qty;
-                continue;
-            }
-
-            // Boneka (item)
-            if (str_contains($name, 'boneka')) {
-                $feeBonekaCum += 1000 * $qty;
-                continue;
-            }
-
-            // Satuan (item)
-            if (str_contains($name, 'satuan')) {
-                $feeSatuanCum += 1000 * $qty;
-                continue;
-            }
-
-            // Setrika generic per kg
-            if (str_contains($name, 'setrika')) {
-                $feeSetrikaCum += 1000 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'setrika'))   { $feeSetrikaCum  += 1000 * $qty; continue; }
         }
 
         $feeLipatCum = intdiv($kgLipatTotalCum, 7) * 3000;
         $totalFeeCum = $feeLipatCum + $feeSetrikaCum + $feeBedCoverCum + $feeHordengCum + $feeBonekaCum + $feeSatuanCum;
 
+        // CASH kumulatif murni (tunai saja) – lalu disesuaikan AJ-QRIS // NEW
         $totalCash = $cashMasukTunaiCum + $extraCashFromBonLunasTunaiCum - $cashKeluarTunaiCum - $totalFeeCum;
+
+        // AJ yang dibayar via QRIS (kumulatif s.d. end) // NEW
+        $ajQrisCum = Rekap::whereNotNull('service_id')
+            ->where('metode_pembayaran_id', $idQris)
+            ->where('created_at', '<=', $end)
+            ->whereHas('service', fn($q) => $q->where('is_fee_service', 1))
+            ->sum('total');
+
+        $totalCashAdj = $totalCash - $ajQrisCum; // tampilkan ini di card dashboard
 
         // ====== BULAN TERPILIH (Chart + Ringkasan + (opsional) tabel) ======
         $selectedMonth = $r->query('m');
-        $monthDate = $selectedMonth
-            ? (Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth())
-            : today()->startOfMonth();
+        $monthDate = $selectedMonth ? (Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth()) : today()->startOfMonth();
 
-        // Dropdown: 12 bulan terakhir dari bulan SEKARANG (tidak mundur ke tahun lalu saat pilih bulan lampau)
+        // Dropdown: 12 bulan terakhir dari bulan SEKARANG
         $nowMonth = today()->startOfMonth();
         $monthOptions = [];
         for ($i = 0; $i < 12; $i++) {
             $m = $nowMonth->copy()->subMonthsNoOverflow($i);
-            $monthOptions[] = [
-                'value' => $m->format('Y-m'),
-                'label' => $m->translatedFormat('M Y'),
-            ];
+            $monthOptions[] = ['value' => $m->format('Y-m'), 'label' => $m->translatedFormat('M Y')];
         }
 
         $prevMonthValue = $monthDate->copy()->subMonthNoOverflow()->format('Y-m');
@@ -266,9 +187,10 @@ class DashboardController extends Controller
         $monthLabel = $monthDate->translatedFormat('F Y');
         $selectedMonthValue = $monthDate->format('Y-m');
 
-        // Omzet per tanggal
+        // Omzet per tanggal (EXCLUDE layanan fee/AJ)  // NEW
         $raw = Rekap::whereBetween('created_at', [$monthStart, $monthEnd])
             ->whereNotNull('service_id')
+            ->whereHas('service', $svcNotFee)
             ->selectRaw('DATE(created_at) as tgl, SUM(total) as omzet')
             ->groupBy('tgl')
             ->pluck('omzet', 'tgl');
@@ -281,7 +203,7 @@ class DashboardController extends Controller
             $chartLabels[] = $key;
             $chartData[]   = (int)($raw[$key] ?? 0);
         }
-        $omzetBulanIniGross = array_sum($chartData);
+        $omzetBulanIniGross = array_sum($chartData); // ini sudah exclude AJ
 
         // Pengeluaran (agregat) – exclude owner draw
         $ownerDrawWords = ['bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas', 'tarik'];
@@ -300,67 +222,32 @@ class DashboardController extends Controller
             ->whereNotNull('service_id')
             ->get();
 
-        $kgLipatMonth   = 0;
-        $feeSetrikaMonth = 0;
-        $feeBedCoverMonth = 0;
-        $feeHordengMonth  = 0;
-        $feeBonekaMonth   = 0;
-        $feeSatuanMonth   = 0;
+        $kgLipatMonth = 0; $feeSetrikaMonth = 0; $feeBedCoverMonth = 0; $feeHordengMonth = 0; $feeBonekaMonth = 0; $feeSatuanMonth = 0;
 
         foreach ($rowsMonth as $row) {
             $qty  = (int)($row->qty ?? 0);
             if ($qty <= 0) continue;
-
             $name = strtolower($row->service->nama_service ?? '');
 
-            if (str_contains($name, 'lipat') && str_contains($name, '/kg') && !str_contains($name, 'bed cover')) {
-                $kgLipatMonth += $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) {
-                $kgLipatMonth += 7 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'lipat') && str_contains($name, '/kg'))                { $kgLipatMonth += $qty; continue; }
+            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg'))   { $kgLipatMonth += 7 * $qty; continue; }
 
-            if (str_contains($name, 'cuci setrika express 3kg')) {
-                $feeSetrikaMonth += 3000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
-                $feeSetrikaMonth += 5000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
-                $feeSetrikaMonth += 7000 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrikaMonth += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrikaMonth += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrikaMonth += 7000 * $qty; continue; }
 
-            if (str_contains($name, 'bed cover')) {
-                $feeBedCoverMonth += 3000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'hordeng')) {
-                $feeHordengMonth  += 3000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'boneka')) {
-                $feeBonekaMonth   += 1000 * $qty;
-                continue;
-            }
-            if (str_contains($name, 'satuan')) {
-                $feeSatuanMonth   += 1000 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'bed cover')) { $feeBedCoverMonth += 3000 * $qty; continue; }
+            if (str_contains($name, 'hordeng'))   { $feeHordengMonth  += 3000 * $qty; continue; }
+            if (str_contains($name, 'boneka'))    { $feeBonekaMonth   += 1000 * $qty; continue; }
+            if (str_contains($name, 'satuan'))    { $feeSatuanMonth   += 1000 * $qty; continue; }
 
-            if (str_contains($name, 'setrika')) {
-                $feeSetrikaMonth  += 1000 * $qty;
-                continue;
-            }
+            if (str_contains($name, 'setrika'))   { $feeSetrikaMonth  += 1000 * $qty; continue; }
         }
 
         $feeLipatMonth     = intdiv($kgLipatMonth, 7) * 3000;
         $totalFeeBulanIni  = $feeLipatMonth + $feeSetrikaMonth + $feeBedCoverMonth + $feeHordengMonth + $feeBonekaMonth + $feeSatuanMonth;
 
+        // Bersih bulanan (opsimu di dashboard: Kotor - Fee - Pengeluaran)
         $pendapatanBersihBulanIni = max(0, $omzetBulanIniGross - $pengeluaranBulanIni - $totalFeeBulanIni);
 
         // === Toggle tabel pengeluaran via tombol ===
@@ -384,7 +271,7 @@ class DashboardController extends Controller
             'pesananDiproses',
             'pesananSelesai',
             'riwayat',
-            'totalCash',
+            'totalCashAdj', // gunakan angka yang sudah dikoreksi AJ-QRIS
 
             // Bulan terpilih
             'monthLabel',
@@ -404,5 +291,26 @@ class DashboardController extends Controller
             'showExpenses',
             'pengeluaranBulanDetail'
         ));
+    }
+
+    // ==== Helper: total KG lipat kumulatif s.d. $until (EXCLUDE bed cover) ====  // NEW
+    private function sumKgLipatUntil($until): int
+    {
+        $rows = Rekap::with('service')
+            ->whereNotNull('service_id')
+            ->where('created_at', '<=', $until)
+            ->get();
+
+        $total = 0;
+        foreach ($rows as $row) {
+            $qty  = (int) ($row->qty ?? 0);
+            if ($qty <= 0) continue;
+
+            $name = strtolower($row->service->nama_service ?? '');
+            if (str_contains($name, 'lipat') && str_contains($name, '/kg')) { $total += $qty; continue; }
+            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) { $total += 7 * $qty; continue; }
+            // bed cover tidak ikut lipat
+        }
+        return $total;
     }
 }

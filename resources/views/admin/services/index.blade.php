@@ -56,7 +56,11 @@
           <th class="px-3 py-2"></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="
+      [&_tr:nth-child(odd)]:bg-slate-50/70
+      [&_tr:nth-child(even)]:bg-white
+      [&_tr:hover]:bg-amber-50/40
+    ">
         @foreach($services as $i => $s)
         <tr class="border-t">
           <td class="px-3 py-2">{{ $services->firstItem() + $i }}</td>

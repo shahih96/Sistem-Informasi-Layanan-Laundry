@@ -181,7 +181,12 @@
                             <th class="px-3 py-2 text-center no-export">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody
+                        class="
+                    [&_tr:nth-child(odd)]:bg-slate-50/70
+                    [&_tr:nth-child(even)]:bg-white
+                    [&_tr:hover]:bg-amber-50/40
+                  ">
                         @foreach ($omset as $i => $r)
                             <tr class="border-t">
                                 <td class="px-3 py-2 text-center">
@@ -239,7 +244,12 @@
                             <th class="px-3 py-2 text-center no-export">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody
+                        class="
+                    [&_tr:nth-child(odd)]:bg-slate-50/70
+                    [&_tr:nth-child(even)]:bg-white
+                    [&_tr:hover]:bg-amber-50/40
+                  ">
                         @foreach ($pengeluaran as $i => $r)
                             <tr class="border-t">
                                 <td class="px-3 py-2 text-center">{{ $pengeluaran->firstItem() + $i }}</td>
@@ -303,7 +313,12 @@
                             <th class="px-3 py-2 text-center">Pembayaran</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody
+                        class="
+                    [&_tr:nth-child(odd)]:bg-slate-50/70
+                    [&_tr:nth-child(even)]:bg-white
+                    [&_tr:hover]:bg-amber-50/40
+                  ">
                         @forelse($bon as $i => $p)
                             @php
                                 $asOfStart = ($day ?? now())->copy()->startOfDay();
@@ -462,7 +477,7 @@
         </script>
 
         <!-- Style khusus saat capture (paksa tampilan desktop & hilangkan scroll)
-                                                                                     >>> TIDAK mematikan shadow supaya kartu tetap “mengambang” seperti di layar <<< -->
+                                                                                             >>> TIDAK mematikan shadow supaya kartu tetap “mengambang” seperti di layar <<< -->
         <style>
             /* aktif hanya saat root diberi .capture-mode */
             #rekap-sheet.capture-mode {
