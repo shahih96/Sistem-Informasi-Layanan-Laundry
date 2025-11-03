@@ -10,13 +10,13 @@ use App\Models\PesananLaundry;
 use App\Models\SaldoKas;
 use App\Models\Fee;
 use App\Models\SaldoKartu;
+use App\Models\OpeningSetup;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 use Carbon\Carbon;
-use Throwable;
 
 class RekapController extends Controller
 {
@@ -50,7 +50,6 @@ class RekapController extends Controller
                 DB::raw('SUM(total)      AS total'),
                 DB::raw('MAX(created_at) AS max_created_at'),
             ])
-            // penting: load is_fee_service juga
             ->with(['service:id,nama_service,is_fee_service', 'metode:id,nama'])
             ->groupBy('service_id', 'metode_pembayaran_id')
             ->orderByDesc('max_created_at')
@@ -83,8 +82,8 @@ class RekapController extends Controller
         $feeLipat    = 0;
         $feeSetrika  = 0;
         $feeBedCover = 0;
-        $feeHordeng  = 0; // gabung kecil & besar (dua2nya @3.000)
-        $feeBoneka   = 0; // gabung besar & kecil (dua2nya @1.000)
+        $feeHordeng  = 0;
+        $feeBoneka   = 0;
         $feeSatuan   = 0;
 
         foreach ($rekapHariIni as $row) {
@@ -160,8 +159,8 @@ class RekapController extends Controller
             }
         }
 
-        // Carry-over lipat: hitung fee lipat yang “jatuh tempo” hari ini
-        $lipatToEnd     = $this->sumKgLipatUntil($end);                    // EXCLUDE bed cover
+        // Carry-over lipat
+        $lipatToEnd     = $this->sumKgLipatUntil($end);
         $lipatToPrevEnd = $this->sumKgLipatUntil($start->copy()->subSecond());
 
         $sisaLipatBaru   = $lipatToEnd % 7;
@@ -176,7 +175,7 @@ class RekapController extends Controller
         $cashMasukTunaiCum = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $end)
-            ->whereHas('service', $svcNotFee) // <—
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
         $cashKeluarTunaiCum = Rekap::whereNull('service_id')
@@ -184,22 +183,22 @@ class RekapController extends Controller
             ->where('created_at', '<=', $end)
             ->sum('total');
 
+        // === Tambahan CASH dari pelunasan BON dibayar TUNAI (termasuk migrasi) ===
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0) // <—
+            ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->where('pesanan_laundry.created_at', '<=', $end)
             ->whereNotNull('pesanan_laundry.paid_at')
             ->where('pesanan_laundry.paid_at', '<=', $end)
             ->where(function ($q) use ($idTunai) {
                 $q->whereNull('rekap.id')
-                    ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
+                  ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
             })
             ->sum(DB::raw(
                 'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
             ));
-
 
         // === FEE KUMULATIF s.d. $end (TERMASUK kategori lain) ===
         $rowsToEnd = Rekap::with('service')
@@ -284,7 +283,7 @@ class RekapController extends Controller
         // === SALDO KAS (AKUMULASI as-of $end) ===
         $totalCash = $cashMasukTunaiCum + $extraCashFromBonLunasTunaiCum - $cashKeluarTunaiCum - $totalFeeCum;
 
-        // AJ dibayar QRIS (akumulasi & hari ini)
+        // === AJ dibayar QRIS (akumulasi & hari ini) ===
         $ajQrisCum = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idQris)
             ->where('created_at', '<=', $end)
@@ -304,22 +303,30 @@ class RekapController extends Controller
             ->whereHas('service', fn($q) => $q->where('is_fee_service', 1))
             ->sum('total');
 
-        // Kas “disesuaikan” = kas tunai murni - AJ-QRIS (karena disalurkan ke kurir)
-        $totalCashAdj = $totalCash - $ajQrisCum;
+        // ====== OPENING KAS (menambah saldo jika melewati cutover) ======
+        $opening = OpeningSetup::latest('id')->first();
+        if ($opening && $opening->cutover_date) {
+            $cut = Carbon::parse($opening->cutover_date)->endOfDay();
+            if ($cut->lte($end)) {
+                $totalCash += (int)$opening->init_cash;
+            }
+        }
 
+        // Kas “disesuaikan” = kas tunai murni - AJ-QRIS
+        $totalCashAdj = $totalCash - $ajQrisCum;
 
         // Piutang = bon (harga terkunci)
         $totalPiutang = PesananLaundry::query()
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0) // <—
+            ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.created_at', '<=', $end)
             ->where(function ($q) use ($idBon, $end) {
                 $q->where(function ($qq) use ($idBon, $end) {
                     $qq->where('pesanan_laundry.metode_pembayaran_id', $idBon)
-                        ->orWhere(function ($qqq) use ($end) {
-                            $qqq->whereNotNull('pesanan_laundry.paid_at')
-                                ->where('pesanan_laundry.paid_at', '>', $end);
-                        });
+                       ->orWhere(function ($qqq) use ($end) {
+                           $qqq->whereNotNull('paid_at')
+                               ->where('paid_at', '>', $end);
+                       });
                 });
             })
             ->sum(DB::raw(
@@ -328,27 +335,33 @@ class RekapController extends Controller
 
         // -------------------------------------------------------
 
-        // List pesanan
+        // List pesanan LUNAS (dibuat hari ini)
         $lunas = PesananLaundry::with('service', 'metode')
             ->whereIn('metode_pembayaran_id', array_filter([$idTunai, $idQris]))
             ->whereBetween('created_at', [$start, $end])
             ->latest()->paginate(10, ['*'], 'lunas');
 
+        // === TABEL BON PELANGGAN ===
+        // Tetap tampilkan:
+        // - semua bon (metode BON) s.d. akhir hari
+        // - bon yang dibuat < start tapi DILUNASI hari ini
+        // - bon migrasi yang dibuat HARI INI lalu dibayar hari ini (tunai/qris)
         $bon = PesananLaundry::with(['service', 'metode'])
             ->where('created_at', '<=', $end)
             ->where(function ($q) use ($idBon, $idTunai, $idQris, $start, $end) {
+                // masih piutang s.d. akhir hari
                 $q->where(function ($qq) use ($idBon, $end) {
                     $qq->where('metode_pembayaran_id', $idBon)
-                        ->orWhere(function ($qqq) use ($end) {
-                            $qqq->whereNotNull('paid_at')
-                                ->where('paid_at', '>', $end);
-                        });
+                       ->orWhere(function ($qqq) use ($end) {
+                           $qqq->whereNotNull('paid_at')
+                               ->where('paid_at', '>', $end);
+                       });
                 })
-                    ->orWhere(function ($qq) use ($idTunai, $idQris, $start, $end) {
-                        $qq->where('created_at', '<', $start)
-                            ->whereBetween('paid_at', [$start, $end])
-                            ->whereIn('metode_pembayaran_id', [$idTunai, $idQris]);
-                    });
+                // dilunasi hari ini (TERMASUK bon migrasi buatan hari ini)
+                ->orWhere(function ($qq) use ($idTunai, $idQris, $start, $end) {
+                    $qq->whereBetween('paid_at', [$start, $end])
+                       ->whereIn('metode_pembayaran_id', [$idTunai, $idQris]);
+                });
             })
             ->latest('created_at')
             ->paginate(20, ['*'], 'bon');
@@ -394,7 +407,7 @@ class RekapController extends Controller
         // Total Omzet (hari ini)
         $totalOmzetKotorHariIni = Rekap::whereNotNull('service_id')
             ->whereBetween('created_at', [$start, $end])
-            ->whereHas('service', $svcNotFee) // <—
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
         $totalOmzetBersihHariIni = max(0, $totalOmzetKotorHariIni - $totalFee);
@@ -402,13 +415,13 @@ class RekapController extends Controller
         $totalTunaiHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->whereBetween('created_at', [$start, $end])
-            ->whereHas('service', $svcNotFee) // <—
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
         $totalQrisHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idQris)
             ->whereBetween('created_at', [$start, $end])
-            ->whereHas('service', $svcNotFee) // <—
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
         // === BREAKDOWN TAMBAHAN (H-1 untuk saldo kemarin) ===
@@ -417,19 +430,23 @@ class RekapController extends Controller
             ->where('created_at', '<=', $prevEnd)
             ->whereHas('service', $svcNotFee)
             ->sum('total');
-        $cashKeluarTunaiCumPrev = Rekap::whereNull('service_id')->where('metode_pembayaran_id', $idTunai)->where('created_at', '<=', $prevEnd)->sum('total');
+
+        $cashKeluarTunaiCumPrev = Rekap::whereNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->where('created_at', '<=', $prevEnd)
+            ->sum('total');
 
         $extraCashFromBonLunasTunaiCumPrev = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0)  // ← tambahkan ini
+            ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
             ->where('pesanan_laundry.created_at', '<=', $prevEnd)
             ->whereNotNull('pesanan_laundry.paid_at')
             ->where('pesanan_laundry.paid_at', '<=', $prevEnd)
             ->where(function ($q) use ($idTunai) {
                 $q->whereNull('rekap.id')
-                    ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
+                  ->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
             })
             ->sum(DB::raw(
                 'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
@@ -513,20 +530,39 @@ class RekapController extends Controller
 
         $saldoCashKemarin = $cashMasukTunaiCumPrev + $extraCashFromBonLunasTunaiCumPrev - $cashKeluarTunaiCumPrev - $totalFeeCumPrev - $ajQrisCumPrev;
 
+        // ====== TAMBAH OPENING UNTUK SALDO KEMARIN (jika cutover <= prevEnd) ======
+        if ($opening && $opening->cutover_date) {
+            $cutPrev = Carbon::parse($opening->cutover_date)->endOfDay();
+            if ($cutPrev->lte($prevEnd)) {
+                $saldoCashKemarin += (int)$opening->init_cash;
+            }
+        }
+
         // ---- Mutasi CASH HARI INI (pakai harga terkunci)
         $penjualanTunaiHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->whereBetween('created_at', [$start, $end])
-            ->whereHas('service', $svcNotFee) // <—
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
+        // ---- Pelunasan BON (tunai) HARI INI, termasuk bon migrasi
         $pelunasanBonTunaiHariIni = PesananLaundry::query()
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0) // <—
-            ->where('pesanan_laundry.created_at', '<', $start)
+            ->where('services.is_fee_service', 0)
             ->whereBetween('pesanan_laundry.paid_at', [$start, $end])
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
+            ->where(function ($q) use ($start) {
+                $q->where('pesanan_laundry.created_at', '<', $start) // bon lama
+                  ->orWhereExists(function ($qq) {                   // bon MIGRASI (dibuat hari ini)
+                      $qq->select(DB::raw(1))
+                         ->from('status_pesanan')
+                         ->whereColumn('status_pesanan.pesanan_id', 'pesanan_laundry.id')
+                         ->where('status_pesanan.keterangan', 'like', 'BON (Migrasi)%');
+                  });
+            })
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         $pengeluaranTunaiHariIni = Rekap::whereNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
@@ -536,27 +572,27 @@ class RekapController extends Controller
         // ---- BON breakdown (harga terkunci)
         $bonKemarin = PesananLaundry::query()
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0) // <—
+            ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.created_at', '<=', $prevEnd)
-            ->where(function ($q) use ($prevEnd, $idBon, $idTunai, $idQris) {
+            ->where(function ($q) use ($prevEnd, $idBon) {
                 $q->where('pesanan_laundry.metode_pembayaran_id', $idBon)
-                    ->orWhere(function ($qq) use ($prevEnd) {
-                        $qq->whereNotNull('pesanan_laundry.paid_at')
-                            ->where('pesanan_laundry.paid_at', '>', $prevEnd);
-                    });
+                  ->orWhere(function ($qq) use ($prevEnd) {
+                      $qq->whereNotNull('paid_at')
+                         ->where('paid_at', '>', $prevEnd);
+                  });
             })
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
 
         $bonMasukHariIni = PesananLaundry::query()
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0) // <—
+            ->where('services.is_fee_service', 0)
             ->whereBetween('pesanan_laundry.created_at', [$start, $end])
             ->where('pesanan_laundry.metode_pembayaran_id', $idBon)
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
 
         $bonDilunasiHariIni = PesananLaundry::query()
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
-            ->where('services.is_fee_service', 0) // <—
+            ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.created_at', '<', $start)
             ->whereBetween('pesanan_laundry.paid_at', [$start, $end])
             ->whereIn('pesanan_laundry.metode_pembayaran_id', [$idTunai, $idQris])
@@ -565,7 +601,7 @@ class RekapController extends Controller
         $totalBonHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idBon)
             ->whereBetween('created_at', [$start, $end])
-            ->whereHas('service', $svcNotFee) // <—
+            ->whereHas('service', $svcNotFee)
             ->sum('total');
 
         // KEEP QUERY PARAM 'd' di pagination
@@ -585,7 +621,7 @@ class RekapController extends Controller
             'feeBedCover',
             'feeHordeng',
             'feeBoneka',
-            'feeSatuan', // ← fee kategori lain (HARI INI)
+            'feeSatuan',
             'sisaLipatBaru',
             'kgLipatTerbayar',
             'setrikaKgTotal',
@@ -594,7 +630,7 @@ class RekapController extends Controller
             'hordengBesarCount',
             'bonekaBesarCount',
             'bonekaKecilCount',
-            'satuanCount', // ← counter buat tampilkan di kartu
+            'satuanCount',
             'lunas',
             'bon',
             'saldoKartu',
@@ -659,7 +695,7 @@ class RekapController extends Controller
                         'service_id'            => $row['serviceId'],
                         'metode_pembayaran_id'  => $row['metodeId'],
                         'qty'                   => $row['qty'],
-                        'harga_satuan'          => $row['subtotal'], // 🔒 kunci unit price
+                        'harga_satuan'          => $row['subtotal'],
                         'subtotal'              => $row['subtotal'],
                         'total'                 => $row['total'],
                     ]);
@@ -878,12 +914,59 @@ class RekapController extends Controller
 
     private function assertTodayOrFail(Request $r): void
     {
-        // Hanya mengizinkan aksi tulis jika TIDAK ada d, atau d == today (zona waktu app)
         if ($r->has('d')) {
             $d = \Carbon\Carbon::parse($r->query('d'))->toDateString();
             if ($d !== today()->toDateString()) {
                 abort(403, 'Input/update rekap hanya diperbolehkan untuk tanggal hari ini.');
             }
         }
+    }
+
+    public function storeOpening(Request $r)
+    {
+        $this->assertTodayOrFail($r);
+
+        $latest = OpeningSetup::latest('id')->first();
+        if ($latest && $latest->locked) {
+            return back()->with('ok_opening', 'Opening sudah dikunci. Tidak bisa diubah dari sini.');
+        }
+
+        $data = $r->validate([
+            'init_cash'    => ['required', 'integer', 'min:0'],
+            'cutover_date' => ['nullable', 'date'],
+        ]);
+
+        $cutover = $data['cutover_date'] ?? now()->toDateString();
+
+        if (!$latest) {
+            OpeningSetup::create([
+                'init_cash'    => (int)$data['init_cash'],
+                'cutover_date' => $cutover,
+                'locked'       => false,
+            ]);
+        } else {
+            $latest->update([
+                'init_cash'    => (int)$data['init_cash'],
+                'cutover_date' => $cutover,
+            ]);
+        }
+
+        return back()->with('ok_opening', 'Opening kas awal disimpan.');
+    }
+
+    public function lockOpening(Request $r)
+    {
+        $this->assertTodayOrFail($r);
+
+        $row = OpeningSetup::latest('id')->first();
+        if (!$row) {
+            return back()->with('ok_opening', 'Belum ada data opening untuk dikunci.');
+        }
+
+        if (!$row->locked) {
+            $row->update(['locked' => true]);
+        }
+
+        return back()->with('ok_opening', 'Opening dikunci. Blok input disembunyikan.');
     }
 }

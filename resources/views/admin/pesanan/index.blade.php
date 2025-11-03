@@ -3,21 +3,104 @@
 
 @section('content')
     <div class="bg-white p-5 rounded-xl shadow">
+
+        @php
+          // cek flag kunci migrasi bon
+          $migrasiFlag = \App\Models\BonMigrasiSetup::latest('id')->first();
+          $migrasiLocked = $migrasiFlag && $migrasiFlag->locked;
+        @endphp
+
+        {{-- ===================== MIGRASI BON LAMA (OPENING) ===================== --}}
+        @if (!$migrasiLocked)
+        <div class="mt-6 mb-8 bg-white rounded-2xl shadow p-5 border border-amber-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold">Migrasi Bon Pelanggan (Buku Lama → Sistem)</h2>
+
+                <form method="POST" action="{{ route('admin.pesanan.lock-migrasi-bon') }}"
+                      onsubmit="return confirm('Kunci migrasi bon? Setelah dikunci, form ini hilang.');">
+                    @csrf
+                    @method('PATCH')
+                    <button class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:brightness-110">Kunci</button>
+                </form>
+            </div>
+
+            <p class="text-sm text-gray-600 mt-1">
+                Gunakan panel ini hanya untuk memindahkan <strong>bon lama</strong>. Data akan tersimpan sebagai
+                <strong>pesanan dengan metode BON</strong> (tanpa membuat rekap).
+                Saat pelanggan melunasi, cukup ubah metode ke Tunai/QRIS seperti biasa.
+            </p>
+
+            <form method="POST" action="{{ route('admin.pesanan.store-migrasi-bon') }}"
+                  class="grid md:grid-cols-2 gap-4 mt-4">
+                @csrf
+
+                <div>
+                    <label class="text-sm">Nama Pelanggan <span class="text-red-500">*</span></label>
+                    <input name="nama_pelanggan" type="text" required class="mt-1 w-full border rounded px-3 py-2"
+                           value="{{ old('nama_pelanggan') }}">
+                    @error('nama_pelanggan') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="text-sm">Layanan <span class="text-red-500">*</span></label>
+                    <select name="service_id" class="mt-1 w-full border rounded px-3 py-2" required>
+                        <option value="">- Pilih Layanan -</option>
+                        @foreach ($services as $s)
+                            @if (!$s->is_fee_service)
+                                <option value="{{ $s->id }}" @selected(old('service_id') == $s->id)>
+                                    {{ $s->nama_service }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
+                                </option>
+                            @endif
+                        @endforeach
+                    </select>
+                    @error('service_id') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label class="text-sm">Kuantitas <span class="text-red-500">*</span></label>
+                    <input name="qty" type="number" min="1" value="{{ old('qty', 1) }}" required
+                           class="mt-1 w-28 border rounded px-3 py-2">
+                    @error('qty') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                </div>
+
+                <div class="md:col-span-2 flex items-center justify-between mt-2">
+                    <div class="text-xs text-gray-500">
+                        Metode otomatis <b>BON</b>. Tidak ada baris rekap yang dibuat.
+                    </div>
+                    <button class="px-5 py-2 rounded-lg bg-gray-800 text-white hover:brightness-110">
+                        Simpan Bon Migrasi
+                    </button>
+                </div>
+            </form>
+
+            @error('migrasi')
+              <div class="mt-3 p-3 rounded bg-red-50 text-red-700 border border-red-200">{{ $message }}</div>
+            @enderror
+
+            @if(session('ok_migrasi_bon'))
+              <div class="mt-3 p-3 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {{ session('ok_migrasi_bon') }}
+              </div>
+            @endif
+        </div>
+        @endif
+        {{-- =================== END: MIGRASI BON LAMA =================== --}}
+
         <div class="text-xl font-bold mb-4">Form Input Data Pesanan</div>
 
         <form method="POST" action="{{ route('admin.pesanan.store') }}" class="grid md:grid-cols-2 gap-4"
-            x-data="pelangganPicker()">
+              x-data="pelangganPicker()">
             @csrf
             <!-- Nama Pelanggan -->
             <div class="relative">
                 <label class="text-sm">Nama Pelanggan</label>
                 <input name="nama_pel" x-model="nama" @input="onNamaInput()" @blur="hideSoon('nama')"
-                    @focus="showList('nama')" autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
+                       @focus="showList('nama')" autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
                 <div x-show="openNama && namaSaran.length"
-                    class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow" @mousedown.prevent>
+                     class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow" @mousedown.prevent>
                     <template x-for="s in namaSaran" :key="s.key">
                         <button type="button" class="block w-full text-left px-3 py-2 hover:bg-gray-50"
-                            @click="applySuggestion(s)">
+                                @click="applySuggestion(s)">
                             <div class="font-medium" x-text="s.nama"></div>
                             <div class="text-xs text-gray-500" x-text="s.hp"></div>
                         </button>
@@ -29,12 +112,12 @@
             <div class="relative">
                 <label class="text-sm">No. HP</label>
                 <input name="no_hp_pel" x-model="hp" @input="onHpInput()" @blur="hideSoon('hp')" @focus="showList('hp')"
-                    autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
+                       autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
                 <div x-show="openHp && hpSaran.length"
-                    class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow" @mousedown.prevent>
+                     class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow" @mousedown.prevent>
                     <template x-for="s in hpSaran" :key="s.key">
                         <button type="button" class="block w-full text-left px-3 py-2 hover:bg-gray-50"
-                            @click="applySuggestion(s)">
+                                @click="applySuggestion(s)">
                             <div class="font-medium" x-text="s.hp"></div>
                             <div class="text-xs text-gray-500" x-text="s.nama"></div>
                         </button>
@@ -46,11 +129,13 @@
             <div>
                 <label class="text-sm">Pilih Layanan</label>
                 <select name="service_id" class="mt-1 w-full border rounded px-3 py-2" required>
-                    <option value="">-</option>
+                    <option value="">- Pilih Layanan -</option>
                     @foreach ($services as $s)
-                        <option value="{{ $s->id }}" @selected(old('service_id') == $s->id)>
-                            {{ $s->nama_service }} (Rp {{ number_format($s->harga_service, 0, ',', '.') }})
-                        </option>
+                        @if (!$s->is_fee_service)
+                            <option value="{{ $s->id }}" @selected(old('service_id') == $s->id)>
+                                {{ $s->nama_service }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
+                            </option>
+                        @endif
                     @endforeach
                 </select>
             </div>
@@ -59,7 +144,7 @@
             <div>
                 <label class="text-sm">Kuantitas</label>
                 <input name="qty" type="number" min="1" value="{{ old('qty', 1) }}"
-                    class="mt-1 w-full border rounded px-3 py-2" required>
+                       class="mt-1 w-full border rounded px-3 py-2" required>
             </div>
 
             <!-- Metode Pembayaran -->
@@ -67,7 +152,7 @@
                 <label class="text-sm">Metode Pembayaran</label>
                 <select name="metode_pembayaran_id" class="mt-1 w-full border rounded px-3 py-2" required>
                     @foreach ($metodes as $m)
-                        <option value="{{ $m->id }}" @selected(old('metode_pembayaran_id') == $m->id)>{{ ucfirst($m->nama) }}</option>
+                        <option value="{{ $m->id }}" @selected(old('metode_pembayaran_id') == $m->id || (strtolower($m->nama) === 'bon' && !old('metode_pembayaran_id')))>{{ ucfirst($m->nama) }}</option>
                     @endforeach
                 </select>
             </div>
@@ -82,7 +167,7 @@
             </div>
 
             <div class="md:col-span-2">
-                <button class="px-5 py-3 rounded-lg bg-gray-800 text-white">Simpan Pesanan</button>
+                <button class="px-5 py-3 rounded-lg bg-blue-600 text-white hover:brightness-110">Simpan Pesanan</button>
             </div>
         </form>
     </div>
@@ -104,7 +189,8 @@
                         <th class="px-3 py-2"></th>
                     </tr>
                 </thead>
-                <tbody class="
+                <tbody
+                    class="
                 [&_tr:nth-child(odd)]:bg-slate-50/70
                 [&_tr:nth-child(even)]:bg-white
                 [&_tr:hover]:bg-amber-50/40
@@ -130,7 +216,7 @@
                             <td class="px-3 py-2">{{ $p->no_hp_pel }}</td>
                             <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
 
-                            {{-- ✅ Dropdown status versi sederhana --}}
+                            {{-- Dropdown status --}}
                             <td class="px-3 py-2">
                                 <form method="POST" action="{{ route('admin.status.store') }}">
                                     @csrf
@@ -147,7 +233,8 @@
                                         class="border rounded px-2 py-1 text-xs appearance-none pr-6 bg-no-repeat {{ $colorClass }}"
                                         style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position:right 0.45rem center;"
                                         onchange="this.form.submit()">
-                                        <option value="Diproses" {{ $currStatus === 'Diproses' ? 'selected' : '' }}>Diproses
+                                        <option value="Diproses" {{ $currStatus === 'Diproses' ? 'selected' : '' }}>
+                                            Diproses
                                         </option>
                                         <option value="Selesai" {{ $currStatus === 'Selesai' ? 'selected' : '' }}>Selesai
                                         </option>
@@ -168,7 +255,8 @@
                             </td>
                             <td class="px-3 py-2 text-right">
                                 @if (!$p->is_hidden)
-                                    <form method="POST" action="{{ route('admin.pesanan.destroy', $p) }}">
+                                    <form method="POST" action="{{ route('admin.pesanan.destroy', $p) }}"
+                                        onsubmit="return confirm('Apakah Anda yakin ingin menyembunyikan pesanan ini?');">
                                         @csrf @method('DELETE')
                                         <button
                                             class="px-3 py-1 text-xs rounded bg-red-600 text-white">Sembunyikan</button>
@@ -189,104 +277,58 @@
         // kode pelangganPicker tetap sama
         const CUSTOMERS = [
             @foreach ($pelangganOptions as $pl)
-                {
-                    nama: {!! json_encode($pl->nama_pel) !!},
-                    hp: {!! json_encode($pl->no_hp_pel) !!}
-                },
+                { nama: {!! json_encode($pl->nama_pel) !!}, hp: {!! json_encode($pl->no_hp_pel) !!} },
             @endforeach
         ];
         const norm = s => (s || '').toString().trim().toLowerCase();
         const onlyDigits = s => (s || '').replace(/\D/g, '');
 
         function lev(a, b) {
-            a = norm(a);
-            b = norm(b);
-            const m = a.length,
-                n = b.length;
-            if (!m) return n;
-            if (!n) return m;
-            const dp = Array.from({
-                length: m + 1
-            }, (_, i) => Array(n + 1).fill(0));
-            for (let i = 0; i <= m; i++) dp[i][0] = i;
-            for (let j = 0; j <= n; j++) dp[0][j] = j;
-            for (let i = 1; i <= m; i++) {
-                for (let j = 1; j <= n; j++) {
-                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-                    dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+            a = norm(a); b = norm(b);
+            const m = a.length, n = b.length;
+            if (!m) return n; if (!n) return m;
+            const dp = Array.from({length: m+1}, (_, i) => Array(n+1).fill(0));
+            for (let i=0;i<=m;i++) dp[i][0]=i;
+            for (let j=0;j<=n;j++) dp[0][j]=j;
+            for (let i=1;i<=m;i++){
+                for (let j=1;j<=n;j++){
+                    const cost = a[i-1]===b[j-1]?0:1;
+                    dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
                 }
             }
             return dp[m][n];
         }
 
-        function rankByName(q) {
-            q = norm(q);
-            if (!q) return [];
-            return CUSTOMERS.map((c, i) => {
-                    const n = norm(c.nama);
-                    const s = (n.startsWith(q) ? 0 : n.includes(q) ? 1 : lev(n, q));
-                    return {
-                        key: i,
-                        ...c,
-                        score: s
-                    };
-                }).filter(x => x.score <= 3 || x.score <= 1)
-                .sort((a, b) => a.score - b.score).slice(0, 6);
+        function rankByName(q){
+            q = norm(q); if(!q) return [];
+            return CUSTOMERS.map((c,i)=>{
+                const n = norm(c.nama);
+                const s = (n.startsWith(q)?0:n.includes(q)?1:lev(n,q));
+                return {key:i, ...c, score:s};
+            }).filter(x=>x.score<=3||x.score<=1).sort((a,b)=>a.score-b.score).slice(0,6);
         }
 
-        function rankByHp(q) {
-            q = onlyDigits(q);
-            if (!q) return [];
-            return CUSTOMERS.map((c, i) => {
-                    const h = onlyDigits(c.hp);
-                    const s = (h.startsWith(q) ? 0 : h.includes(q) ? 1 : lev(h, q));
-                    return {
-                        key: i,
-                        ...c,
-                        score: s
-                    };
-                }).filter(x => x.score <= 3 || x.score <= 1)
-                .sort((a, b) => a.score - b.score).slice(0, 6);
+        function rankByHp(q){
+            q = onlyDigits(q); if(!q) return [];
+            return CUSTOMERS.map((c,i)=>{
+                const h = onlyDigits(c.hp);
+                const s = (h.startsWith(q)?0:h.includes(q)?1:lev(h,q));
+                return {key:i, ...c, score:s};
+            }).filter(x=>x.score<=3||x.score<=1).sort((a,b)=>a.score-b.score).slice(0,6);
         }
 
-        function pelangganPicker() {
+        function pelangganPicker(){
             return {
-                nama: @json(old('nama_pel', '')),
-                hp: @json(old('no_hp_pel', '')),
-                openNama: false,
-                openHp: false,
-                namaSaran: [],
-                hpSaran: [],
-                hideTimer: null,
-                showList(w) {
-                    if (w === 'nama') this.openNama = true;
-                    else this.openHp = true;
-                },
-                hideSoon(w) {
-                    clearTimeout(this.hideTimer);
-                    this.hideTimer = setTimeout(() => {
-                        if (w === 'nama') this.openNama = false;
-                        else this.openHp = false;
-                    }, 120);
-                },
-                onNamaInput() {
-                    this.namaSaran = rankByName(this.nama);
-                    this.openNama = !!this.namaSaran.length;
-                    const e = CUSTOMERS.find(c => norm(c.nama) === norm(this.nama));
-                    if (e && !this.hp) this.hp = e.hp;
-                },
-                onHpInput() {
-                    this.hpSaran = rankByHp(this.hp);
-                    this.openHp = !!this.hpSaran.length;
-                    const e = CUSTOMERS.find(c => onlyDigits(c.hp) === onlyDigits(this.hp));
-                    if (e && !this.nama) this.nama = e.nama;
-                },
-                applySuggestion(s) {
-                    this.nama = s.nama;
-                    this.hp = s.hp;
-                    this.openNama = false;
-                    this.openHp = false;
-                }
+                nama: @json(old('nama_pel','')),
+                hp: @json(old('no_hp_pel','')),
+                openNama:false, openHp:false,
+                namaSaran:[], hpSaran:[],
+                hideTimer:null,
+                showList(w){ if(w==='nama') this.openNama = true; else this.openHp = true; },
+                hideSoon(w){ clearTimeout(this.hideTimer); this.hideTimer=setTimeout(()=>{ if(w==='nama') this.openNama=false; else this.openHp=false; },120); },
+                onNamaInput(){ this.namaSaran = rankByName(this.nama); this.openNama = !!this.namaSaran.length; const e = CUSTOMERS.find(c=>norm(c.nama)===norm(this.nama)); if(e && !this.hp) this.hp = e.hp; },
+                onHpInput(){ this.hpSaran = rankByHp(this.hp); this.openHp = !!this.hpSaran.length; const e = CUSTOMERS.find(c=>onlyDigits(c.hp)===onlyDigits(this.hp)); if(e && !this.nama) this.nama = e.nama; },
+                applySuggestion(s){ this.nama=s.nama; this.hp=s.hp; this.openNama=false; this.openHp=false; }
             }
         }
     </script>

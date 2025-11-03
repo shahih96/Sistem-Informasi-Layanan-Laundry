@@ -97,7 +97,7 @@
             @endforeach
           </select>
           @if(request('show_exp')) <input type="hidden" name="show_exp" value="1">@endif
-          <button class="px-3 py-1.5 rounded-lg bg-gray-800 text-white hover:brightness-110">Terapkan</button>
+          <button class="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:brightness-110">Terapkan</button>
         </form>
       </div>
     </div>

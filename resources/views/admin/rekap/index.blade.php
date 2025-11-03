@@ -12,7 +12,7 @@
         <form method="GET" action="{{ route('admin.rekap.index') }}" class="flex items-center gap-2">
             <input type="date" name="d" value="{{ request('d', optional($day ?? now())->toDateString()) }}"
                 class="border rounded-lg px-3 py-2" />
-            <button class="px-4 py-2 rounded-lg bg-gray-800 text-white hover:brightness-110">
+            <button class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:brightness-110">
                 Tampilkan
             </button>
         </form>
@@ -445,7 +445,7 @@
         <div class="mt-6 text-right">
             @if ($isToday)
                 <a href="{{ route('admin.rekap.input', ['d' => request('d', optional($day ?? now())->toDateString())]) }}"
-                    class="inline-flex items-center gap-2 rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110">
+                    class="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -454,7 +454,7 @@
                 </a>
             @endif
             <button id="btn-download-jpg"
-                class="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110 no-export">
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110 no-export">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

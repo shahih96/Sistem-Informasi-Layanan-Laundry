@@ -39,7 +39,7 @@
       <input id="harga_create_value" type="hidden" name="harga_service" value="{{ old('harga_service') }}">
     </div>
 
-    <button class="px-5 py-2 rounded bg-gray-800 text-white">Simpan</button>
+    <button class="px-5 py-2 rounded bg-blue-600 text-white hover:brightness-110">Simpan</button>
   </form>
 </div>
 
@@ -87,10 +87,10 @@
           <td class="px-3 py-2">{{ $s->updated_at->format('d M Y') }}</td>
 
           <td class="px-3 py-2 text-right">
-              <button class="px-3 py-1 text-xs rounded bg-gray-800 text-white">update</button>
+              <button class="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:brightness-110">update</button>
             </form>
 
-            <form method="POST" action="{{ route('admin.services.destroy',$s) }}" class="inline">
+            <form method="POST" action="{{ route('admin.services.destroy',$s) }}" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus layanan {{ $s->nama_service }}?');">
               @csrf @method('DELETE')
               <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">hapus</button>
             </form>

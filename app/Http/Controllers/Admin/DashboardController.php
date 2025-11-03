@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PesananLaundry;
 use App\Models\Rekap;
 use App\Models\MetodePembayaran;
+use App\Models\OpeningSetup; // <-- Tambah import
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -16,17 +17,17 @@ class DashboardController extends Controller
     public function index(Request $r)
     {
         // ====== HARI INI (cards) ======
-        $day   = $r->query('d') ? Carbon::parse($r->query('d')) : today();
-        $start = $day->copy()->startOfDay();
-        $end   = $day->copy()->endOfDay();
-        $prevEnd = $start->copy()->subSecond(); // NEW
+        $day     = $r->query('d') ? Carbon::parse($r->query('d')) : today();
+        $start   = $day->copy()->startOfDay();
+        $end     = $day->copy()->endOfDay();
+        $prevEnd = $start->copy()->subSecond();
 
         // filter layanan non-fee (exclude AJ)
-        $svcNotFee = function ($q) { $q->where('is_fee_service', false); }; // NEW
+        $svcNotFee = function ($q) { $q->where('is_fee_service', false); };
 
         $totalPesananHariIni = PesananLaundry::whereBetween('created_at', [$start, $end])->count();
 
-        // Pendapatan (kotor) HARI INI -> EXCLUDE layanan fee (AJ)  // NEW
+        // Pendapatan (kotor) HARI INI -> EXCLUDE layanan fee (AJ)
         $pendapatanHariIni = Rekap::whereNotNull('service_id')
             ->whereBetween('created_at', [$start, $end])
             ->whereHas('service', $svcNotFee)
@@ -38,10 +39,7 @@ class DashboardController extends Controller
             ->whereBetween('created_at', [$start, $end])
             ->get();
 
-        // Setrika: 3/5/7 kg fixed, sisanya per kg
-        $feeSetrika = 0;
-
-        // Kategori tambahan (per item)
+        $feeSetrika  = 0;
         $feeBedCover = 0;  // 3.000 / item
         $feeHordeng  = 0;  // 3.000 / item
         $feeBoneka   = 0;  // 1.000 / item
@@ -53,25 +51,22 @@ class DashboardController extends Controller
 
             $name = strtolower($row->service->nama_service ?? '');
 
-            // SETRIKA EXPRESS (fixed)
             if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrika += 3000 * $qty; continue; }
             if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrika += 5000 * $qty; continue; }
             if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrika += 7000 * $qty; continue; }
 
-            // BED COVER / HORDENG / BONEKA / SATUAN
-            if (str_contains($name, 'bed cover'))       { $feeBedCover += 3000 * $qty; continue; }
-            if (str_contains($name, 'hordeng'))         { $feeHordeng  += 3000 * $qty; continue; }
-            if (str_contains($name, 'boneka'))          { $feeBoneka   += 1000 * $qty; continue; }
-            if (str_contains($name, 'satuan'))          { $feeSatuan   += 1000 * $qty; continue; }
+            if (str_contains($name, 'bed cover')) { $feeBedCover += 3000 * $qty; continue; }
+            if (str_contains($name, 'hordeng'))   { $feeHordeng  += 3000 * $qty; continue; }
+            if (str_contains($name, 'boneka'))    { $feeBoneka   += 1000 * $qty; continue; }
+            if (str_contains($name, 'satuan'))    { $feeSatuan   += 1000 * $qty; continue; }
 
-            // SETRIKA generic per kg
-            if (str_contains($name, 'setrika'))         { $feeSetrika  += 1000 * $qty; continue; }
+            if (str_contains($name, 'setrika'))   { $feeSetrika  += 1000 * $qty; continue; }
         }
 
-        // === FEE LIPAT HARI INI pakai carry-over (SAMA dgn RekapController) === // NEW
-        $lipatToEnd     = $this->sumKgLipatUntil($end);
-        $lipatToPrevEnd = $this->sumKgLipatUntil($prevEnd);
-        $feeLipatHariIni = (intdiv($lipatToEnd, 7) - intdiv($lipatToPrevEnd, 7)) * 3000;
+        // === FEE LIPAT HARI INI pakai carry-over (SAMA dgn RekapController) ===
+        $lipatToEnd       = $this->sumKgLipatUntil($end);
+        $lipatToPrevEnd   = $this->sumKgLipatUntil($prevEnd);
+        $feeLipatHariIni  = (intdiv($lipatToEnd, 7) - intdiv($lipatToPrevEnd, 7)) * 3000;
 
         $feeTotalHariIni = $feeLipatHariIni + $feeSetrika + $feeBedCover + $feeHordeng + $feeBoneka + $feeSatuan;
 
@@ -92,7 +87,7 @@ class DashboardController extends Controller
         $idTunai = MetodePembayaran::where('nama', 'tunai')->value('id');
         $idQris  = MetodePembayaran::where('nama', 'qris')->value('id');
 
-        // MASUK tunai (exclude AJ)  // NEW
+        // MASUK tunai (exclude AJ)
         $cashMasukTunaiCum = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idTunai)
             ->where('created_at', '<=', $end)
@@ -105,12 +100,13 @@ class DashboardController extends Controller
             ->where('created_at', '<=', $end)
             ->sum('total');
 
-        // BON lama dilunasi TUNAI hari ini (harga terkunci) – exclude AJ  // NEW
+        // BON dilunasi TUNAI (harga terkunci) – exclude AJ
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
             ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
             ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
+            ->where('pesanan_laundry.created_at', '<=', $end)     // <-- disamakan dg RekapController
             ->whereNotNull('pesanan_laundry.paid_at')
             ->where('pesanan_laundry.paid_at', '<=', $end)
             ->where(function ($q) use ($idTunai) {
@@ -154,23 +150,32 @@ class DashboardController extends Controller
         $feeLipatCum = intdiv($kgLipatTotalCum, 7) * 3000;
         $totalFeeCum = $feeLipatCum + $feeSetrikaCum + $feeBedCoverCum + $feeHordengCum + $feeBonekaCum + $feeSatuanCum;
 
-        // CASH kumulatif murni (tunai saja) – lalu disesuaikan AJ-QRIS // NEW
+        // CASH kumulatif murni (tunai saja)
         $totalCash = $cashMasukTunaiCum + $extraCashFromBonLunasTunaiCum - $cashKeluarTunaiCum - $totalFeeCum;
 
-        // AJ yang dibayar via QRIS (kumulatif s.d. end) // NEW
+        // ====== OPENING KAS (samakan dengan RekapController) ======
+        $opening = OpeningSetup::latest('id')->first();
+        if ($opening && $opening->cutover_date) {
+            $cut = Carbon::parse($opening->cutover_date)->endOfDay();
+            if ($cut->lte($end)) {
+                $totalCash += (int)$opening->init_cash;
+            }
+        }
+
+        // AJ yang dibayar via QRIS (kumulatif s.d. end)
         $ajQrisCum = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idQris)
             ->where('created_at', '<=', $end)
             ->whereHas('service', fn($q) => $q->where('is_fee_service', 1))
             ->sum('total');
 
-        $totalCashAdj = $totalCash - $ajQrisCum; // tampilkan ini di card dashboard
+        // Total Cash Disesuaikan (kurangi AJ-QRIS)
+        $totalCashAdj = $totalCash - $ajQrisCum;
 
-        // ====== BULAN TERPILIH (Chart + Ringkasan + (opsional) tabel) ======
+        // ====== BULAN TERPILIH (Chart + Ringkasan) ======
         $selectedMonth = $r->query('m');
         $monthDate = $selectedMonth ? (Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth()) : today()->startOfMonth();
 
-        // Dropdown: 12 bulan terakhir dari bulan SEKARANG
         $nowMonth = today()->startOfMonth();
         $monthOptions = [];
         for ($i = 0; $i < 12; $i++) {
@@ -187,7 +192,7 @@ class DashboardController extends Controller
         $monthLabel = $monthDate->translatedFormat('F Y');
         $selectedMonthValue = $monthDate->format('Y-m');
 
-        // Omzet per tanggal (EXCLUDE layanan fee/AJ)  // NEW
+        // Omzet per tanggal (EXCLUDE layanan fee/AJ)
         $raw = Rekap::whereBetween('created_at', [$monthStart, $monthEnd])
             ->whereNotNull('service_id')
             ->whereHas('service', $svcNotFee)
@@ -203,7 +208,7 @@ class DashboardController extends Controller
             $chartLabels[] = $key;
             $chartData[]   = (int)($raw[$key] ?? 0);
         }
-        $omzetBulanIniGross = array_sum($chartData); // ini sudah exclude AJ
+        $omzetBulanIniGross = array_sum($chartData); // sudah exclude AJ
 
         // Pengeluaran (agregat) – exclude owner draw
         $ownerDrawWords = ['bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas', 'tarik'];
@@ -229,8 +234,8 @@ class DashboardController extends Controller
             if ($qty <= 0) continue;
             $name = strtolower($row->service->nama_service ?? '');
 
-            if (str_contains($name, 'lipat') && str_contains($name, '/kg'))                { $kgLipatMonth += $qty; continue; }
-            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg'))   { $kgLipatMonth += 7 * $qty; continue; }
+            if (str_contains($name, 'lipat') && str_contains($name, '/kg'))              { $kgLipatMonth += $qty; continue; }
+            if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) { $kgLipatMonth += 7 * $qty; continue; }
 
             if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrikaMonth += 3000 * $qty; continue; }
             if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrikaMonth += 5000 * $qty; continue; }
@@ -247,7 +252,6 @@ class DashboardController extends Controller
         $feeLipatMonth     = intdiv($kgLipatMonth, 7) * 3000;
         $totalFeeBulanIni  = $feeLipatMonth + $feeSetrikaMonth + $feeBedCoverMonth + $feeHordengMonth + $feeBonekaMonth + $feeSatuanMonth;
 
-        // Bersih bulanan (opsimu di dashboard: Kotor - Fee - Pengeluaran)
         $pendapatanBersihBulanIni = max(0, $omzetBulanIniGross - $pengeluaranBulanIni - $totalFeeBulanIni);
 
         // === Toggle tabel pengeluaran via tombol ===
@@ -271,7 +275,7 @@ class DashboardController extends Controller
             'pesananDiproses',
             'pesananSelesai',
             'riwayat',
-            'totalCashAdj', // gunakan angka yang sudah dikoreksi AJ-QRIS
+            'totalCashAdj',
 
             // Bulan terpilih
             'monthLabel',
@@ -293,7 +297,7 @@ class DashboardController extends Controller
         ));
     }
 
-    // ==== Helper: total KG lipat kumulatif s.d. $until (EXCLUDE bed cover) ====  // NEW
+    // ==== Helper: total KG lipat kumulatif s.d. $until (EXCLUDE bed cover) ====
     private function sumKgLipatUntil($until): int
     {
         $rows = Rekap::with('service')

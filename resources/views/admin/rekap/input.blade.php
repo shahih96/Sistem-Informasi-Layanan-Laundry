@@ -30,6 +30,123 @@
         </div>
     @endif
 
+    {{-- ======================= OPENING KAS AWAL (SEKALI ISI) ======================= --}}
+    @php
+      $opening = \App\Models\OpeningSetup::latest('id')->first();
+      $openingDone = $opening && $opening->locked;
+    @endphp
+
+    @if (!$openingDone)
+      <section class="mt-6 bg-white rounded-2xl shadow p-5" id="form-opening-cash">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-lg font-bold">Opening Kas Awal (sekali isi)</div>
+
+          {{-- Tombol kunci: sembunyikan form setelah dikunci --}}
+          @if($opening && !$opening->locked)
+            <form method="POST" action="{{ route('admin.rekap.lock-opening') }}"
+                  onsubmit="return confirm('Kunci opening? Setelah dikunci tidak bisa diedit dari sini.')">
+              @csrf
+              @method('PATCH')
+              <button class="px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm" {{ $isToday ? '' : 'disabled' }}>
+                Kunci
+              </button>
+            </form>
+          @endif
+        </div>
+
+        @if (session('ok_opening'))
+          <div class="mb-3 p-3 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {{ session('ok_opening') }}
+          </div>
+        @endif
+
+        {{-- Error khusus opening --}}
+        @if ($errors->has('init_cash') || $errors->has('cutover_date'))
+          <div class="mb-3 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+            <ul class="list-disc pl-5 space-y-1">
+              @error('init_cash') <li>{{ $message }}</li> @enderror
+              @error('cutover_date') <li>{{ $message }}</li> @enderror
+            </ul>
+          </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.rekap.store-opening') }}" class="grid md:grid-cols-3 gap-4">
+          @csrf
+
+          {{-- Saldo kas awal (Rp) dengan formatter bertitik --}}
+          <div>
+            <label class="block text-sm mb-1">Saldo Kas Awal (Rp)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
+              <input id="init_cash_display" type="text" inputmode="numeric" autocomplete="off"
+                     class="w-full border rounded px-3 py-2 pl-9"
+                     value="{{ old('init_cash', optional($opening)->init_cash ? number_format((int) $opening->init_cash, 0, ',', '.') : '') }}"
+                     {{ $isToday ? '' : 'disabled' }}>
+              <input id="init_cash" name="init_cash" type="hidden" value="{{ old('init_cash', optional($opening)->init_cash) }}">
+            </div>
+            @error('init_cash') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+          </div>
+
+          {{-- Tanggal cutover (opsional, default hari ini / existing) --}}
+          <div>
+            <label class="block text-sm mb-1">Tanggal Cutover</label>
+            <input name="cutover_date" type="date" class="w-full border rounded px-3 py-2"
+                   value="{{ old('cutover_date', optional(optional($opening)->cutover_date)->toDateString() ?? now()->toDateString()) }}"
+                   {{ $isToday ? '' : 'disabled' }}>
+            @error('cutover_date') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+          </div>
+
+          <div class="flex items-end">
+            <button class="px-4 py-2 rounded-lg bg-gray-800 text-white hover:brightness-110 disabled:opacity-50"
+                    {{ $isToday ? '' : 'disabled' }}>
+              Simpan Opening
+            </button>
+          </div>
+        </form>
+
+        <p class="text-xs text-gray-500 mt-3">
+          Catatan: Opening ini hanya menambah dasar kas dan <strong>tidak dihitung sebagai omzet harian</strong>.
+          Setelah <strong>dikunci</strong>, blok ini akan hilang dari halaman.
+        </p>
+      </section>
+
+      {{-- Script formatter rupiah untuk Opening Kas --}}
+      <script>
+        (function() {
+          const fmt = new Intl.NumberFormat('id-ID');
+          const display = document.getElementById('init_cash_display');
+          const hidden  = document.getElementById('init_cash');
+          if (!display || !hidden) return;
+
+          const sanitize = s => (s || '').replace(/[^\d]/g, '');
+
+          function render() {
+            const raw = sanitize(display.value);
+            if (raw.length) {
+              const n = parseInt(raw, 10) || 0;
+              hidden.value = n;
+              display.value = fmt.format(n);
+            } else {
+              hidden.value = '';
+              display.value = '';
+            }
+          }
+
+          // init dari nilai awal
+          render();
+
+          display.addEventListener('input', () => {
+            const atEnd = display.selectionStart === display.value.length;
+            render();
+            if (atEnd) {
+              const len = display.value.length;
+              display.setSelectionRange(len, len);
+            }
+          });
+        })();
+      </script>
+    @endif
+
     {{-- ======================= FORM OMSET ======================= --}}
     <section x-data="omsetForm()" class="mt-6 bg-white rounded-2xl shadow p-5" id="form-omzet">
         <div class="text-lg font-bold mb-4">Tabel Omset</div>
@@ -141,7 +258,7 @@
                 </template>
 
                 <button
-                    class="inline-flex items-center rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110 disabled:opacity-50"
+                    class="inline-flex items-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110 disabled:opacity-50"
                     {{ $isToday ? '' : 'disabled' }} title="{{ $isToday ? '' : 'Hanya bisa input di tanggal hari ini' }}">
                     Submit Omset
                 </button>
@@ -240,7 +357,7 @@
                 </template>
 
                 <button
-                    class="inline-flex items-center rounded-lg bg-gray-800 text-white px-4 py-2 hover:brightness-110 disabled:opacity-50"
+                    class="inline-flex items-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110 disabled:opacity-50"
                     {{ $isToday ? '' : 'disabled' }}
                     title="{{ $isToday ? '' : 'Hanya bisa input di tanggal hari ini' }}">
                     Submit Pengeluaran
@@ -307,7 +424,7 @@
             <div>
                 <label class="text-sm">Jumlah Tap Gagal (Jumlah)</label>
                 <input name="tap_gagal" type="text" inputmode="numeric" pattern="\d*" autocomplete="off"
-                    class="w-full border rounded px-3 py-2" value="{{ old('tap_gagal', 0) }}"
+                    class="w-full border rounded px-3 py-2 mt-1" value="{{ old('tap_gagal', 0) }}"
                     {{ $isToday ? '' : 'disabled' }}>
                 @error('tap_gagal')
                     <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
@@ -315,7 +432,7 @@
             </div>
 
             <div class="flex items-end">
-                <button class="w-full md:w-auto px-5 py-3 rounded-lg bg-gray-800 text-white disabled:opacity-50"
+                <button class="w-full md:w-auto px-5 py-3 rounded-lg bg-blue-600 text-white disabled:opacity-50 hover:brightness-110"
                     {{ $isToday ? '' : 'disabled' }}
                     title="{{ $isToday ? '' : 'Hanya bisa input di tanggal hari ini' }}">
                     Submit Saldo Kartu

@@ -7,9 +7,12 @@ use App\Models\PesananLaundry;
 use App\Models\Service;
 use App\Models\MetodePembayaran;
 use App\Models\Rekap;
+use App\Models\BonMigrasiSetup;      // ⬅️ flag kunci migrasi bon
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class PesananLaundryController extends Controller
 {
@@ -44,11 +47,8 @@ class PesananLaundryController extends Controller
         ]);
 
         DB::transaction(function () use ($data) {
-
-            // Ambil harga saat ini dari service
             $hargaSekarang = (int) Service::whereKey($data['service_id'])->value('harga_service');
 
-            // 1) Simpan pesanan
             $pesanan = PesananLaundry::create([
                 'service_id'           => $data['service_id'],
                 'nama_pel'             => $data['nama_pel'],
@@ -56,22 +56,20 @@ class PesananLaundryController extends Controller
                 'qty'                  => (int) $data['qty'],
                 'admin_id'             => Auth::id(),
                 'metode_pembayaran_id' => $data['metode_pembayaran_id'],
-                'harga_satuan'         => $hargaSekarang, // 🔥 kunci harga saat dibuat
+                'harga_satuan'         => $hargaSekarang, // kunci harga saat dibuat
             ]);
 
-            // 2) Simpan status awal
             $pesanan->statuses()->create([
                 'keterangan' => $data['status_awal'],
             ]);
 
-            // 3) Buat rekap otomatis dari pesanan (pakai harga_satuan)
             Rekap::firstOrCreate(
                 ['pesanan_laundry_id' => $pesanan->id],
                 [
                     'service_id'           => $pesanan->service_id,
                     'metode_pembayaran_id' => $pesanan->metode_pembayaran_id,
                     'qty'                  => $pesanan->qty,
-                    'harga_satuan'         => $pesanan->harga_satuan,          // ✅ simpan juga di rekap
+                    'harga_satuan'         => $pesanan->harga_satuan,
                     'subtotal'             => $pesanan->harga_satuan,
                     'total'                => $pesanan->harga_satuan * $pesanan->qty,
                     'keterangan'           => 'Omset dari pesanan',
@@ -92,17 +90,14 @@ class PesananLaundryController extends Controller
             'metode_pembayaran_id' => 'required|exists:metode_pembayaran,id',
         ]);
 
-        // ❗ harga_satuan tidak diubah agar historis tetap
         $pesanan->update([
             'nama_pel'             => $data['nama_pel'],
             'no_hp_pel'            => $data['no_hp_pel'],
             'service_id'           => $data['service_id'],
             'qty'                  => (int) $data['qty'],
             'metode_pembayaran_id' => $data['metode_pembayaran_id'],
-            // 'harga_satuan' tidak disentuh
         ]);
 
-        // Rekap tidak diubah agar data historis stabil
         return back()->with('ok', 'Pesanan berhasil diperbarui.');
     }
 
@@ -110,5 +105,77 @@ class PesananLaundryController extends Controller
     {
         $pesanan->update(['is_hidden' => true]);
         return back()->with('ok', 'Pesanan disembunyikan dari halaman tracking.');
+    }
+
+    /**
+     * Migrasi bon lama → buat pesanan BON tanpa membuat rekap.
+     * Form: nama_pelanggan, service_id, qty (sederhana).
+     * - Disimpan ke kolom: nama_pel, no_hp_pel (diisi '-' agar tidak NULL), dst.
+     * - Ditolak kalau migrasi sudah dikunci.
+     */
+    public function storeMigrasiBon(Request $r)
+    {
+        // stop jika sudah dikunci
+        $flag = BonMigrasiSetup::latest('id')->first();
+        if ($flag && $flag->locked) {
+            return back()->withErrors(['migrasi' => 'Migrasi bon sudah dikunci. Form ini tidak bisa dipakai lagi.']);
+        }
+
+        $data = $r->validate([
+            'nama_pelanggan' => ['required', 'string', 'max:100'],
+            'service_id'     => [
+                'required',
+                Rule::exists('services', 'id')->where(fn($q) => $q->where('is_fee_service', 0))
+            ],
+            'qty'            => ['required', 'integer', 'min:1', 'max:9999'],
+        ]);
+
+        $svc = Service::findOrFail($data['service_id']);
+        $hargaSatuan = (int) $svc->harga_service; // versi simpel (tanpa harga_custom)
+
+        $idBon = MetodePembayaran::whereRaw('LOWER(nama)=?', ['bon'])->value('id');
+        if (!$idBon) {
+            return back()->withErrors(['migrasi' => 'Metode BON belum dikonfigurasi. Tambahkan metode "bon" dulu di master Metode Pembayaran.']);
+        }
+
+        $createdAt = now();
+
+        DB::transaction(function () use ($data, $idBon, $hargaSatuan, $createdAt) {
+            $p = PesananLaundry::create([
+                'service_id'           => $data['service_id'],
+                'nama_pel'             => $data['nama_pelanggan'],
+                'no_hp_pel'            => '-',                 // ⬅️ anti-NULL supaya lolos constraint
+                'qty'                  => (int)$data['qty'],
+                'admin_id'             => Auth::id(),
+                'metode_pembayaran_id' => $idBon,              // selalu BON saat migrasi
+                'harga_satuan'         => $hargaSatuan,        // kunci harga
+                'paid_at'              => null,                // masih piutang
+                'created_at'           => $createdAt,
+                'updated_at'           => $createdAt,
+            ]);
+
+            // status penanda
+            $p->statuses()->create([
+                'keterangan' => 'BON (Migrasi)',
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
+            ]);
+        });
+
+        return back()->with('ok', 'Bon lama berhasil dimigrasikan sebagai pesanan BON. Saat lunas, ubah metodenya ke Tunai/QRIS.');
+    }
+
+    /**
+     * Kunci migrasi bon -> setelah ini form hilang & submit ditolak.
+     */
+    public function lockMigrasiBon(Request $r)
+    {
+        $row = BonMigrasiSetup::latest('id')->first();
+        if (!$row) {
+            BonMigrasiSetup::create(['locked' => true]);
+        } else if (!$row->locked) {
+            $row->update(['locked' => true]);
+        }
+        return back()->with('ok_migrasi_bon', 'Migrasi bon dikunci. Form disembunyikan.');
     }
 }
