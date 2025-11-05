@@ -45,7 +45,7 @@
 
         <!-- {{-- Ringkasan Keuangan (atas) --}} -->
         <div class="grid md:grid-cols-4 gap-4 capture-desktop-4">
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
                 <div class="text-sm opacity-70">Total Cash Laundry (Akumulasi)</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalCashAdj, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">Saldo kemarin: Rp
@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-red-500">
                 <div class="text-sm opacity-70">Total Bon Pelanggan (Akumulasi)</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalPiutang ?? 0, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">Bon kemarin: Rp {{ number_format($bonKemarin, 0, ',', '.') }}</div>
@@ -84,7 +84,7 @@
                 </div>
             </div>
 
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-yellow-500">
                 <div class="text-sm opacity-70">Total Fee Karyawan Hari ini</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalFee ?? 0, 0, ',', '.') }}</div>
 
@@ -126,7 +126,7 @@
                 @endif
             </div>
 
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
                 <div class="text-sm opacity-70">Total Omset Bersih Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalOmzetBersihHariIni, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">(Kotor: Rp
@@ -139,7 +139,7 @@
             </div>
         </div>
         <div class="mt-4 grid md:grid-cols-3 gap-4 capture-desktop-3">
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
                 <div class="text-sm opacity-70">Sisa Saldo Kartu Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">
                     {{ is_null($saldoKartu) ? '—' : 'Rp ' . number_format($saldoKartu, 0, ',', '.') }}
@@ -149,14 +149,14 @@
                 </div>
             </div>
 
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
                 <div class="text-sm opacity-70">Total Tap Kartu Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">
                     {{ $totalTapHariIni === null || (int) $totalTapHariIni === 0 ? '—' : (int) $totalTapHariIni }}
                 </div>
             </div>
 
-            <div class="bg-white p-5 rounded-xl shadow">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
                 <div class="text-sm opacity-70">Tap Gagal Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">
                     {{ $tapGagalHariIni === null || (int) $tapGagalHariIni === 0 ? '—' : number_format($tapGagalHariIni, 0, ',', '.') }}
@@ -282,11 +282,15 @@
                                 <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
                                 <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
                                 <td class="px-3 py-2 text-center no-export">
-                                    <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
-                                        onsubmit="return confirm('Hapus baris ini?')">
-                                        @csrf @method('DELETE')
-                                        <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
-                                    </form>
+                                    @if ($isToday)
+                                        <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
+                                            onsubmit="return confirm('Hapus baris ini?')">
+                                            @csrf @method('DELETE')
+                                            <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-gray-400">—</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -308,9 +312,9 @@
                             <th class="px-3 py-2 text-left">Layanan</th>
                             <th class="px-3 py-2 text-center">Kuantitas</th>
                             <th class="px-3 py-2 text-center">Total</th>
-                            <th class="px-3 py-2 text-center">Tanggal Masuk</th>
-                            <th class="px-3 py-2 text-center">Metode</th> {{-- baru --}}
+                            <th class="px-3 py-2 text-center">Metode</th>
                             <th class="px-3 py-2 text-center">Pembayaran</th>
+                            <th class="px-3 py-2 text-center">Tanggal Masuk</th>
                         </tr>
                     </thead>
                     <tbody
@@ -348,7 +352,6 @@
                                 <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
                                 <td class="px-3 py-2 text-center">{{ $qty }}</td>
                                 <td class="px-3 py-2 text-center">Rp {{ number_format($total, 0, ',', '.') }}</td>
-                                <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
 
                                 {{-- Metode (dropdown) --}}
                                 <td class="px-3 py-2 text-center">
@@ -427,6 +430,9 @@
                                         </div>
                                     @endif
                                 </td>
+
+                                {{-- Tanggal Masuk --}}
+                                <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
                             </tr>
                             @empty
                                 <tr>

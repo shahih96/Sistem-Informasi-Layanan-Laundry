@@ -178,15 +178,14 @@
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-50">
                     <tr>
+                        <th class="px-3 py-2"></th>
                         <th class="px-3 py-2 text-left">Pelanggan</th>
-                        <th class="px-3 py-2 text-left">No HP</th>
                         <th class="px-3 py-2 text-left">Layanan</th>
                         <th class="px-3 py-2 text-left">Status</th>
                         <th class="px-3 py-2 text-center">Qty</th>
                         <th class="px-3 py-2 text-right">Total</th>
                         <th class="px-3 py-2 text-center">Pembayaran</th>
                         <th class="px-3 py-2 text-left">Update Terakhir</th>
-                        <th class="px-3 py-2"></th>
                     </tr>
                 </thead>
                 <tbody
@@ -203,42 +202,71 @@
                             $metode = $p->metode->nama ?? null;
                             $isLunas = in_array($metode, ['tunai', 'qris']);
                             $currStatus = optional($p->statuses->first())->keterangan ?? 'Diproses';
+                            
+                            // Cek apakah pesanan ini akan segera auto-hide (hari ke-12 & 13)
+                            $statusSelesai = $p->statuses()->where('keterangan', 'Selesai')->latest()->first();
+                            $hariSelesai = $statusSelesai ? $statusSelesai->created_at->diffInDays(now()) : 0;
+                            $willAutoHide = $statusSelesai && $hariSelesai >= 12 && $hariSelesai < 14 && !$p->is_hidden;
                         @endphp
 
-                        <tr class="border-t {{ $p->is_hidden ? 'bg-red-50/60' : '' }}">
+                        <tr class="border-t {{ $p->is_hidden ? 'bg-red-50/60' : ($willAutoHide ? 'bg-orange-50/40' : '') }}">
                             <td class="px-3 py-2">
-                                {{ $p->nama_pel }}
-                                @if ($p->is_hidden)
-                                    <span
-                                        class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border bg-red-100 text-red-700 border-red-200">Disembunyikan</span>
+                                @if (!$p->is_hidden)
+                                    <form method="POST" action="{{ route('admin.pesanan.destroy', $p) }}"
+                                        onsubmit="return confirm('Apakah Anda yakin ingin menyembunyikan pesanan ini?');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit"
+                                            class="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center hover:bg-red-700 transition-colors"
+                                            title="Sembunyikan">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-[11px] text-gray-400 italic">✓</span>
                                 @endif
                             </td>
-                            <td class="px-3 py-2">{{ $p->no_hp_pel }}</td>
+                            <td class="px-3 py-2">
+                                <div>
+                                    {{ $p->nama_pel }}
+                                    @if ($p->is_hidden)
+                                        <span
+                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border bg-red-100 text-red-700 border-red-200">Disembunyikan</span>
+                                    @elseif ($willAutoHide)
+                                        <span
+                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border bg-orange-100 text-orange-700 border-orange-200"
+                                            title="Akan otomatis tersembunyi dalam {{ 14 - $hariSelesai }} hari">
+                                            Auto-hide {{ 14 - $hariSelesai }}h
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="text-xs text-gray-500 mt-0.5">{{ $p->no_hp_pel }}</div>
+                            </td>
                             <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
 
-                            {{-- Dropdown status --}}
+                            {{-- Toggle status dengan satu klik --}}
                             <td class="px-3 py-2">
                                 <form method="POST" action="{{ route('admin.status.store') }}">
                                     @csrf
                                     <input type="hidden" name="pesanan_id" value="{{ $p->id }}">
                                     @php
-                                        $colorClass = match ($currStatus) {
-                                            'Diproses' => 'bg-yellow-100 border-yellow-400 text-yellow-800',
-                                            'Selesai' => 'bg-blue-100 border-blue-400 text-blue-800',
-                                            default => 'bg-white border-gray-300 text-gray-700',
+                                        $newStatus = ($currStatus === 'Diproses') ? 'Selesai' : 'Diproses';
+                                        $btnClass = match ($currStatus) {
+                                            'Diproses' => 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-sm hover:shadow-md',
+                                            'Selesai' => 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm hover:shadow-md',
+                                            default => 'bg-gray-500 text-white hover:bg-gray-600 shadow-sm hover:shadow-md',
                                         };
                                     @endphp
-
-                                    <select name="keterangan"
-                                        class="border rounded px-2 py-1 text-xs appearance-none pr-6 bg-no-repeat {{ $colorClass }}"
-                                        style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position:right 0.45rem center;"
-                                        onchange="this.form.submit()">
-                                        <option value="Diproses" {{ $currStatus === 'Diproses' ? 'selected' : '' }}>
-                                            Diproses
-                                        </option>
-                                        <option value="Selesai" {{ $currStatus === 'Selesai' ? 'selected' : '' }}>Selesai
-                                        </option>
-                                    </select>
+                                    <input type="hidden" name="keterangan" value="{{ $newStatus }}">
+                                    <button type="submit"
+                                        class="inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-xs transition-all duration-150 active:scale-95 {{ $btnClass }}"
+                                        title="Klik untuk ubah ke {{ $newStatus }}">
+                                        {{ $currStatus }}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-75" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
                                 </form>
                             </td>
 
@@ -253,18 +281,6 @@
                             </td>
                             <td class="px-3 py-2">{{ optional($p->statuses->first())->created_at?->format('d/m/y H:i') }}
                             </td>
-                            <td class="px-3 py-2 text-right">
-                                @if (!$p->is_hidden)
-                                    <form method="POST" action="{{ route('admin.pesanan.destroy', $p) }}"
-                                        onsubmit="return confirm('Apakah Anda yakin ingin menyembunyikan pesanan ini?');">
-                                        @csrf @method('DELETE')
-                                        <button
-                                            class="px-3 py-1 text-xs rounded bg-red-600 text-white">Sembunyikan</button>
-                                    </form>
-                                @else
-                                    <span class="text-[11px] text-gray-500 italic">Tersembunyi</span>
-                                @endif
-                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -274,10 +290,16 @@
     </div>
 
     <script>
-        // kode pelangganPicker tetap sama
+        // Filter pelanggan dengan nomor HP yang valid
         const CUSTOMERS = [
             @foreach ($pelangganOptions as $pl)
-                { nama: {!! json_encode($pl->nama_pel) !!}, hp: {!! json_encode($pl->no_hp_pel) !!} },
+                @php
+                    $hp = trim($pl->no_hp_pel ?? '');
+                    $hasValidHp = $hp !== '' && $hp !== '-' && $hp !== 'null';
+                @endphp
+                @if ($hasValidHp)
+                    { nama: {!! json_encode($pl->nama_pel) !!}, hp: {!! json_encode($pl->no_hp_pel) !!} },
+                @endif
             @endforeach
         ];
         const norm = s => (s || '').toString().trim().toLowerCase();

@@ -17,3 +17,9 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Backup files
+/backup/*.sql
+
+# Hosting info (contains sensitive data)
+HOSTING_INFO.txt

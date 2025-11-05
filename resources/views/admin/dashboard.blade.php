@@ -5,19 +5,19 @@
 @section('content')
 {{-- ===== CARDS: HARI INI ===== --}}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-  <div class="bg-white p-5 rounded-xl shadow">
+  <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
     <div class="text-sm opacity-70">Total Pesanan Hari ini</div>
     <div class="mt-2 text-3xl font-bold">{{ $totalPesananHariIni }}</div>
   </div>
-  <div class="bg-white p-5 rounded-xl shadow">
+  <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
     <div class="text-sm opacity-70">Pendapatan Hari ini (Kotor)</div>
     <div class="mt-2 text-3xl font-bold">Rp {{ number_format($pendapatanHariIni,0,',','.') }}</div>
   </div>
-  <div class="bg-white p-5 rounded-xl shadow">
+  <div class="bg-white p-5 rounded-xl shadow border-l-4 border-yellow-500">
     <div class="text-sm opacity-70">Pesanan Diproses</div>
     <div class="mt-2 text-3xl font-bold">{{ $pesananDiproses }}</div>
   </div>
-  <div class="bg-white p-5 rounded-xl shadow">
+  <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
     <div class="text-sm opacity-70">Pesanan Selesai</div>
     <div class="mt-2 text-3xl font-bold">{{ $pesananSelesai }}</div>
   </div>
@@ -110,7 +110,7 @@
   {{-- Kanan: 3 kartu --}}
   <div class="grid gap-4">
     <div class="grid grid-cols-2 gap-4">
-      <div class="bg-white p-5 rounded-xl shadow flex items-center justify-between">
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-red-500 flex items-center justify-between">
         <div>
           <div class="text-xs uppercase tracking-wide text-gray-500">Pengeluaran Bulan {{ $monthLabel }}</div>
           <div class="mt-2 text-xl font-bold">Rp {{ number_format($pengeluaranBulanIni,0,',','.') }}</div>
@@ -120,7 +120,7 @@
         </svg>
       </div>
 
-      <div class="bg-white p-5 rounded-xl shadow flex items-center justify-between">
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500 flex items-center justify-between">
         <div>
           <div class="text-xs uppercase tracking-wide text-gray-500">Total Cash (s.d. hari ini)</div>
           <div class="mt-2 text-xl font-bold">Rp {{ number_format($totalCashAdj,0,',','.') }}</div>
@@ -131,7 +131,7 @@
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-xl shadow flex items-center justify-between">
+    <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500 flex items-center justify-between">
       <div>
         <div class="text-xs uppercase tracking-wide text-gray-500">Pendapatan (Bersih) Bulan {{ $monthLabel }}</div>
         <div class="mt-2 text-2xl font-bold">Rp {{ number_format($pendapatanBersihBulanIni,0,',','.') }}</div>

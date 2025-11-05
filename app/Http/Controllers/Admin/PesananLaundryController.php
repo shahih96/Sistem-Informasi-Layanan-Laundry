@@ -7,7 +7,7 @@ use App\Models\PesananLaundry;
 use App\Models\Service;
 use App\Models\MetodePembayaran;
 use App\Models\Rekap;
-use App\Models\BonMigrasiSetup;      // ⬅️ flag kunci migrasi bon
+use App\Models\BonMigrasiSetup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
