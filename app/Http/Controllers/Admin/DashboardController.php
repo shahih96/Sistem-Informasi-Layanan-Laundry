@@ -94,7 +94,7 @@ class DashboardController extends Controller
             ->sum('total');
 
         // Pendapatan Bersih Hari Ini = Omzet Kotor - Fee - Pengeluaran
-        $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni - $pengeluaranHariIni);
+        $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni);
 
         // ====== STATUS PESANAN (KESELURUHAN, bukan hanya hari ini) ======
         // Ambil semua pesanan dengan status terakhirnya

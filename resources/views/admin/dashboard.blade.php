@@ -74,39 +74,50 @@
 {{-- ===== OMZET + RINGKASAN BULAN TERPILIH ===== --}}
 <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
   {{-- Kiri: Chart --}}
-  <div class="bg-white p-5 rounded-xl shadow lg:col-span-2">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-      <div class="font-semibold">Omzet Bulan {{ $monthLabel }}</div>
+  <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 lg:col-span-2">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-blue-600"></div>
+        <div class="font-bold text-lg text-gray-800">Omzet Bulan {{ $monthLabel }}</div>
+      </div>
 
       <div class="flex items-center gap-2">
         {{-- Prev --}}
         <a href="{{ route('dashboard', array_filter(['m'=>$prevMonthValue,'show_exp'=>request('show_exp')?1:null])) }}"
-           class="px-3 py-1.5 rounded-lg border hover:bg-gray-50"
+           class="p-2 rounded-lg border-2 border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
            title="Bulan sebelumnya">
-          ‹
+          <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
         </a>
 
         {{-- Chip label bulan --}}
-        <span class="px-3 py-1.5 rounded-full border bg-white select-none text-sm">
+        <span class="px-4 py-2 rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 font-bold text-sm shadow-sm">
           {{ $monthLabel }}
         </span>
 
         {{-- Next (hanya jika <= bulan sekarang) --}}
         @if($canNext)
           <a href="{{ route('dashboard', array_filter(['m'=>$nextMonthValue,'show_exp'=>request('show_exp')?1:null])) }}"
-             class="px-3 py-1.5 rounded-lg border hover:bg-gray-50"
+             class="p-2 rounded-lg border-2 border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
              title="Bulan berikutnya">
-            ›
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
           </a>
         @else
-          <button class="px-3 py-1.5 rounded-lg border opacity-40 cursor-not-allowed" title="Sudah bulan terbaru">›</button>
-        @endif>
+          <button class="p-2 rounded-lg border-2 border-gray-200 opacity-40 cursor-not-allowed" title="Sudah bulan terbaru">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        @endif
 
         {{-- Dropdown "lompat ke bulan" --}}
         <form method="GET" action="{{ route('dashboard') }}" class="flex items-center gap-2">
           <select name="m"
-                  class="border rounded-lg px-3 py-1.5 appearance-none pr-8 bg-white bg-[right_0.6rem_center] bg-no-repeat"
-                  style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>');">
+                  class="border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none pr-8 bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm font-medium"
+                  style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat;">
             @foreach($monthOptions as $opt)
               <option value="{{ $opt['value'] }}" {{ $opt['value'] === $selectedMonthValue ? 'selected' : '' }}>
                 {{ $opt['label'] }}
@@ -114,12 +125,14 @@
             @endforeach
           </select>
           @if(request('show_exp')) <input type="hidden" name="show_exp" value="1">@endif
-          <button class="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:brightness-110">Terapkan</button>
+          <button class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+            Terapkan
+          </button>
         </form>
       </div>
     </div>
 
-    <div class="relative h-64 md:h-72">
+    <div class="relative h-64 md:h-80 bg-gradient-to-br from-blue-50 via-white to-cyan-50 rounded-xl p-4 border border-blue-100 shadow-inner">
       <canvas id="omzetMonthlyChart" class="absolute inset-0 w-full h-full"></canvas>
     </div>
   </div>
@@ -251,9 +264,12 @@
   const labels = labelsRaw.map(d => (d || '').slice(8,10));
 
   const h = el.parentElement ? (el.parentElement.clientHeight || 240) : 240;
+  
+  // Gradient untuk area di bawah garis (biru ke transparan)
   const gradient = ctx.createLinearGradient(0, 0, 0, h);
-  gradient.addColorStop(0, 'rgba(17,24,39,0.35)');
-  gradient.addColorStop(1, 'rgba(17,24,39,0.02)');
+  gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');   // Blue-500 with opacity
+  gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.25)');
+  gradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
 
   if (window.omzetChart) window.omzetChart.destroy();
 
@@ -262,34 +278,97 @@
     data: {
       labels,
       datasets: [{
-        label: 'Omzet',
+        label: 'Omzet Harian',
         data: series,
         fill: true,
         backgroundColor: gradient,
-        borderColor: '#111827',
-        borderWidth: 1.5,
-        tension: 0.35,
-        pointRadius: 2,
-        pointHoverRadius: 4,
+        borderColor: 'rgb(37, 99, 235)',        // Blue-600
+        borderWidth: 3,
+        tension: 0.4,
+        pointRadius: 5,
+        pointBackgroundColor: 'rgb(37, 99, 235)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointHoverRadius: 8,
+        pointHoverBackgroundColor: 'rgb(29, 78, 216)',  // Blue-700
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 3,
         spanGaps: true,
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index',
+      },
       scales: {
-        x: { grid: { display: false } },
+        x: { 
+          grid: { 
+            display: false,
+            drawBorder: false 
+          },
+          ticks: {
+            font: {
+              size: 12,
+              weight: '600',
+              family: "'Inter', sans-serif"
+            },
+            color: '#6b7280'
+          }
+        },
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(0,0,0,0.08)' },
-          ticks: { callback: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) }
+          grid: { 
+            color: 'rgba(59, 130, 246, 0.1)',
+            drawBorder: false 
+          },
+          ticks: { 
+            callback: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v),
+            font: {
+              size: 11,
+              weight: '500',
+              family: "'Inter', sans-serif"
+            },
+            color: '#6b7280',
+            padding: 8
+          }
         }
       },
       plugins: {
-        legend: { display: false },
+        legend: { 
+          display: false 
+        },
         tooltip: {
-          callbacks: { label: c => 'Rp ' + new Intl.NumberFormat('id-ID').format(c.parsed.y) }
+          enabled: true,
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          titleFont: {
+            size: 13,
+            weight: 'bold',
+            family: "'Inter', sans-serif"
+          },
+          bodyFont: {
+            size: 15,
+            weight: '600',
+            family: "'Inter', sans-serif"
+          },
+          padding: 12,
+          cornerRadius: 10,
+          displayColors: false,
+          callbacks: { 
+            title: function(context) {
+              return 'Tanggal ' + context[0].label;
+            },
+            label: c => 'Rp ' + new Intl.NumberFormat('id-ID').format(c.parsed.y)
+          }
         }
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeInOutQuart'
       }
     }
   });

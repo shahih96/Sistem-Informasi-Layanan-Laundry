@@ -144,7 +144,7 @@
             <!-- Info layanan dan harga -->
             <div class="mt-8 text-center">
                 <a href="{{ route('services', false) ?: '#' }}"
-                    class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-[#084cac] text-[#084cac] hover:bg-[#f0f4ff]">
+                    class="inline-flex items-center justify-center px-5 py-3 rounded-lg text-white bg-[#084cac] shadow hover:brightness-110">
                     Info Layanan & Harga
                 </a>
             </div>
@@ -152,7 +152,7 @@
 
         <!-- TENTANG KAMI -->
         <section id="tentang" class="scroll-mt-16 md:scroll-mt-20">
-            <div class="max-w-7xl mx-auto px-4 py-16">
+            <div class="max-w-7xl mx-auto px-4 py-8 md:py-16">
                 <div
                     class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#CDE6EE] to-white ring-1 ring-black/5 shadow-sm">
                     <div
@@ -289,15 +289,15 @@
         </section>
 
         <!-- CTA AKHIR -->
-        <section id="pesan" class="scroll-mt-16 md:scroll-mt-20 max-w-7xl mx-auto px-4 py-8 md:py-16">
-            <div class="grid md:grid-cols-2 gap-6 md:gap-10 items-center">
-                <div class="h-full flex flex-col justify-center space-y-3 md:space-y-5 lg:space-y-6">
+        <section id="pesan" class="scroll-mt-16 md:scroll-mt-20 max-w-7xl mx-auto px-4 py-4 md:py-16">
+            <div class="grid md:grid-cols-2 gap-6 md:gap-10">
+                <div class="h-full min-h-[22rem] flex flex-col justify-center space-y-3 md:space-y-5 lg:space-y-6 py-8 md:py-0">
                     <p class="text-gray-700">Nikmati Waktu Santai dan Ketenangan</p>
                     <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">
                         Qxpress Laundry<br />Bikin Nyantai
                     </h2>
-                    <p class="text-gray-600">“Layanan laundry berkualitas dengan harga terjangkau, proses cepat, dan
-                        pelayanan ramah.”</p>
+                    <p class="text-gray-600">"Layanan laundry berkualitas dengan harga terjangkau, proses cepat, dan
+                        pelayanan ramah."</p>
                     <div class="flex gap-3 md:gap-4">
                         <a href="{{ $waUrl }}" target="_blank" rel="noopener noreferrer"
                             class="inline-flex items-center justify-center px-5 py-3 rounded-lg text-white bg-[#084cac] shadow hover:brightness-110">
