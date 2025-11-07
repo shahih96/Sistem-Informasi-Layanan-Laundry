@@ -305,10 +305,19 @@ class RekapController extends Controller
 
         // ====== OPENING KAS (menambah saldo jika melewati cutover) ======
         $opening = OpeningSetup::latest('id')->first();
+        $openingCash = 0;
+        $openingCashForDisplay = 0;
         if ($opening && $opening->cutover_date) {
             $cut = Carbon::parse($opening->cutover_date)->copy()->endOfDay();
             if ($cut->lte($end)) {
-                $totalCash += (int)$opening->init_cash;
+                $openingCash = (int)$opening->init_cash;
+                $totalCash += $openingCash;
+            }
+            
+            $cutStart = Carbon::parse($opening->cutover_date)->copy()->startOfDay();
+            $cutEnd = Carbon::parse($opening->cutover_date)->copy()->endOfDay();
+            if ($start->between($cutStart, $cutEnd)) {
+                $openingCashForDisplay = (int)$opening->init_cash;
             }
         }
 
@@ -576,6 +585,60 @@ class RekapController extends Controller
             ->whereBetween('created_at', [$start, $end])
             ->sum('total');
 
+        // Breakdown pengeluaran tunai: pisahkan tarik kas, fee ongkir, gaji, dan pengeluaran normal
+        $ownerDrawWords = ['bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas'];
+        $feeOngkirWords = ['ongkir', 'anter jemput', 'antar jemput'];
+        $gajiWords = ['gaji'];
+        
+        $tarikKasHariIni = Rekap::whereNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->whereBetween('created_at', [$start, $end])
+            ->where(function ($q) use ($ownerDrawWords) {
+                foreach ($ownerDrawWords as $w) {
+                    $q->orWhereRaw('LOWER(COALESCE(keterangan,"")) LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+            })
+            ->sum('total');
+        
+        $feeOngkirHariIni = Rekap::whereNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->whereBetween('created_at', [$start, $end])
+            ->where(function ($q) use ($feeOngkirWords) {
+                foreach ($feeOngkirWords as $w) {
+                    $q->orWhereRaw('LOWER(COALESCE(keterangan,"")) LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+            })
+            ->sum('total');
+        
+        $gajiHariIni = Rekap::whereNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->whereBetween('created_at', [$start, $end])
+            ->where(function ($q) use ($gajiWords) {
+                foreach ($gajiWords as $w) {
+                    $q->orWhereRaw('LOWER(COALESCE(keterangan,"")) LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+            })
+            ->sum('total');
+        
+        $pengeluaranTunaiMurniHariIni = Rekap::whereNull('service_id')
+            ->where('metode_pembayaran_id', $idTunai)
+            ->whereBetween('created_at', [$start, $end])
+            ->where(function ($q) use ($ownerDrawWords, $feeOngkirWords, $gajiWords) {
+                // Exclude tarik kas
+                foreach ($ownerDrawWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+                // Exclude fee ongkir
+                foreach ($feeOngkirWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+                // Exclude gaji
+                foreach ($gajiWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+            })
+            ->sum('total');
+
         // ---- BON breakdown (harga terkunci)
         $bonKemarin = PesananLaundry::query()
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
@@ -653,6 +716,10 @@ class RekapController extends Controller
             'penjualanTunaiHariIni',
             'pelunasanBonTunaiHariIni',
             'pengeluaranTunaiHariIni',
+            'tarikKasHariIni',
+            'feeOngkirHariIni',
+            'gajiHariIni',
+            'pengeluaranTunaiMurniHariIni',
             'bonKemarin',
             'bonMasukHariIni',
             'bonDilunasiHariIni',
@@ -663,17 +730,31 @@ class RekapController extends Controller
             'ajQrisHariIni',
             'totalCashAdj',
             'ajQrisCumPrev',
+            'openingCashForDisplay',
         ));
     }
 
     // input baris rekap omzet/pengeluaran sekali submit
     public function store(Request $r)
     {
-        $this->assertTodayOrFail($r);
+        $this->assertEditableOrFail($r);
+        
+        // Tentukan tanggal target dari POST body atau default hari ini
+        $targetDate = $r->input('d') 
+            ? \Carbon\Carbon::parse($r->input('d'))->setTime(now()->hour, now()->minute, now()->second)
+            : now();
+            
+        Log::info('[Rekap.store] START', [
+            'd_param' => $r->input('d'),
+            'target_date' => $targetDate->toDateTimeString(),
+        ]);
+            
         try {
             $rawRows = $r->input('rows', []);
 
             $rows = [];
+            $bonId = MetodePembayaran::where('nama', 'bon')->value('id');
+            
             foreach ($rawRows as $row) {
                 $serviceId = $row['service_id'] ?? null;
                 $metodeId  = $row['metode_pembayaran_id'] ?? null;
@@ -682,6 +763,12 @@ class RekapController extends Controller
                 $total     = (int)($row['total'] ?? 0);
 
                 if (!$serviceId || $qty <= 0 || $subtotal <= 0 || $total <= 0) continue;
+                
+                // BLOKIR transaksi BON di mode revisi H-1
+                if ($targetDate->isYesterday() && $metodeId == $bonId) {
+                    return back()->withInput()
+                        ->withErrors(['rows' => 'Transaksi BON tidak dapat ditambahkan atau direvisi di hari sebelumnya. Hubungi admin untuk koreksi manual.'], 'omzet');
+                }
 
                 $rows[] = compact('serviceId', 'metodeId', 'qty', 'subtotal', 'total');
             }
@@ -696,18 +783,27 @@ class RekapController extends Controller
                 'rows.*.metode_pembayaran_id' => ['nullable', 'exists:metode_pembayaran,id'],
             ]);
 
-            DB::transaction(function () use ($rows) {
+            $savedIds = [];
+            DB::transaction(function () use ($rows, $targetDate, &$savedIds) {
                 foreach ($rows as $row) {
-                    Rekap::create([
+                    $rekap = Rekap::create([
                         'service_id'            => $row['serviceId'],
                         'metode_pembayaran_id'  => $row['metodeId'],
                         'qty'                   => $row['qty'],
                         'harga_satuan'          => $row['subtotal'],
                         'subtotal'              => $row['subtotal'],
                         'total'                 => $row['total'],
+                        'created_at'            => $targetDate,
+                        'updated_at'            => $targetDate,
                     ]);
+                    $savedIds[] = $rekap->id;
                 }
             });
+            
+            Log::info('[Rekap.store] SUCCESS', [
+                'saved_ids' => $savedIds,
+                'count' => count($savedIds),
+            ]);
 
             return back()->with('ok', 'Rekap omzet berhasil disimpan.');
         } catch (\Throwable $e) {
@@ -733,8 +829,14 @@ class RekapController extends Controller
 
     public function storeSaldo(Request $request)
     {
-        $this->assertTodayOrFail($request);
-        $isFirstDay = !SaldoKartu::whereDate('created_at', '<', today())->exists();
+        $this->assertEditableOrFail($request);
+        
+        // Tentukan tanggal target dari POST body atau default hari ini
+        $targetDate = $request->input('d') 
+            ? \Carbon\Carbon::parse($request->input('d'))->setTime(now()->hour, now()->minute, now()->second)
+            : now();
+            
+        $isFirstDay = !SaldoKartu::whereDate('created_at', '<', $targetDate)->exists();
 
         $rules = [
             'tap_gagal' => ['required', 'integer', 'min:0'],
@@ -753,14 +855,19 @@ class RekapController extends Controller
             'saldo_baru'        => (int) ($data['saldo_kartu'] ?? 0),
             'tap_gagal'         => (int) ($data['tap_gagal'] ?? 0),
             'manual_total_tap'  => $isFirstDay ? ($data['manual_total_tap'] ?? null) : null,
+            'created_at'        => $targetDate,
+            'updated_at'        => $targetDate,
         ];
 
         try {
-            DB::transaction(function () use ($payload) {
-                $row = SaldoKartu::whereDate('created_at', today())->lockForUpdate()->first();
+            DB::transaction(function () use ($payload, $targetDate) {
+                $row = SaldoKartu::whereDate('created_at', $targetDate)->lockForUpdate()->first();
 
-                if ($row) $row->update($payload);
-                else      SaldoKartu::create($payload);
+                if ($row) {
+                    $row->update($payload);
+                } else {
+                    SaldoKartu::create($payload);
+                }
             });
 
             return back()->with('ok', 'Saldo kartu berhasil disimpan.');
@@ -773,22 +880,34 @@ class RekapController extends Controller
 
     public function destroy(Rekap $rekap, Request $r)
     {
-        $this->assertTodayOrFail($r);
+        $this->assertEditableOrFail($r);
         $rekap->delete();
         return back()->with('ok', 'Baris rekap berhasil dihapus.');
     }
 
     public function destroyGroup(Request $r)
     {
-        $this->assertTodayOrFail($r);
+        $this->assertEditableOrFail($r);
+        
+        // Tentukan tanggal target dari request atau default hari ini
+        $targetDate = $r->has('d') 
+            ? \Carbon\Carbon::parse($r->query('d'))
+            : today();
+            
         $data = $r->validate([
             'service_id'            => ['required', 'exists:services,id'],
             'metode_pembayaran_id'  => ['nullable', 'exists:metode_pembayaran,id'],
         ]);
+        
+        // BLOKIR hapus transaksi BON di mode revisi H-1
+        $bonId = MetodePembayaran::where('nama', 'bon')->value('id');
+        if ($targetDate->isYesterday() && $data['metode_pembayaran_id'] == $bonId) {
+            return back()->withErrors(['destroyGroup' => 'Transaksi BON tidak dapat dihapus di hari sebelumnya. Hubungi admin untuk koreksi manual.']);
+        }
 
         $deleted = Rekap::where('service_id', $data['service_id'])
             ->where('metode_pembayaran_id', $data['metode_pembayaran_id'])
-            ->whereBetween('created_at', [today()->startOfDay(), today()->endOfDay()])
+            ->whereBetween('created_at', [$targetDate->copy()->startOfDay(), $targetDate->copy()->endOfDay()])
             ->delete();
 
         return back()->with('ok', "Grup omzet dihapus ($deleted baris).");
@@ -796,11 +915,19 @@ class RekapController extends Controller
 
     public function storePengeluaran(Request $r)
     {
-        $this->assertTodayOrFail($r);
+        $this->assertEditableOrFail($r);
+        
+        // Tentukan tanggal target dari POST body atau default hari ini
+        $targetDate = $r->input('d') 
+            ? \Carbon\Carbon::parse($r->input('d'))
+            : today();
+            
         try {
             $raw = $r->input('outs', []);
 
             $rows = [];
+            $bonId = MetodePembayaran::where('nama', 'bon')->value('id');
+            
             foreach ($raw as $row) {
                 $ket      = trim((string)($row['keterangan'] ?? ''));
                 $subtotal = (int)($row['subtotal'] ?? 0);
@@ -808,6 +935,12 @@ class RekapController extends Controller
                 $metode   = $row['metode_pembayaran_id'] ?? null;
 
                 if ($subtotal <= 0) continue;
+                
+                // BLOKIR transaksi BON di mode revisi H-1
+                if ($targetDate->isYesterday() && $metode == $bonId) {
+                    return back()->withInput()
+                        ->withErrors(['outs' => 'Transaksi BON tidak dapat ditambahkan atau direvisi di hari sebelumnya. Hubungi admin untuk koreksi manual.'], 'pengeluaran');
+                }
 
                 $rows[] = [
                     'keterangan' => $ket,
@@ -826,7 +959,7 @@ class RekapController extends Controller
                 'outs.*.metode_pembayaran_id' => ['nullable', 'exists:metode_pembayaran,id'],
             ]);
 
-            DB::transaction(function () use ($rows) {
+            DB::transaction(function () use ($rows, $targetDate) {
                 foreach ($rows as $row) {
                     Rekap::create([
                         'service_id'            => null,
@@ -837,7 +970,8 @@ class RekapController extends Controller
                         'keterangan'            => $row['keterangan'] ?: null,
                         'created_at'            => filled($row['tanggal'])
                             ? \Carbon\Carbon::parse($row['tanggal'])->endOfDay()
-                            : now(),
+                            : $targetDate,
+                        'updated_at'            => $targetDate,
                     ]);
                 }
             });
@@ -852,7 +986,17 @@ class RekapController extends Controller
 
     public function updateBonMetode(Request $r, PesananLaundry $pesanan)
     {
-        $this->assertTodayOrFail($r);
+        $this->assertEditableOrFail($r);
+        
+        // BLOKIR update metode BON di mode revisi H-1
+        $targetDate = $r->input('d') 
+            ? \Carbon\Carbon::parse($r->input('d'))
+            : today();
+            
+        if ($targetDate->isYesterday()) {
+            return back()->withErrors(['metode' => 'Metode pembayaran BON tidak dapat diubah di hari sebelumnya. Hubungi admin untuk koreksi manual.']);
+        }
+        
         $r->validate([
             'metode' => ['required', 'in:bon,tunai,qris'],
         ]);
@@ -926,6 +1070,29 @@ class RekapController extends Controller
             if ($d !== today()->toDateString()) {
                 abort(403, 'Input/update rekap hanya diperbolehkan untuk tanggal hari ini.');
             }
+        }
+    }
+
+    /**
+     * Validasi: Hanya izinkan edit untuk hari ini (H) atau kemarin (H-1)
+     * H-2 dan sebelumnya = read-only
+     */
+    private function assertEditableOrFail(Request $r): void
+    {
+        // Cek dari POST body dulu, jika tidak ada baru cek query string
+        $targetDate = $r->input('d') ?: $r->query('d');
+        
+        if ($targetDate) {
+            $targetDate = \Carbon\Carbon::parse($targetDate)->toDateString();
+        } else {
+            $targetDate = today()->toDateString();
+        }
+
+        $today = today()->toDateString();
+        $yesterday = today()->subDay()->toDateString();
+
+        if ($targetDate !== $today && $targetDate !== $yesterday) {
+            abort(403, 'Edit rekap hanya diperbolehkan untuk hari ini atau kemarin (H-1). Data tanggal lebih lama bersifat read-only.');
         }
     }
 

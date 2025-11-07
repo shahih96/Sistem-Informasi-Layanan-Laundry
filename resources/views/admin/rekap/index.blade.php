@@ -5,6 +5,8 @@
 
     @php
         $isToday = ($day ?? now())->isToday();
+        $isYesterday = ($day ?? now())->isYesterday();
+        $isEditable = $isToday || $isYesterday; // H atau H-1 bisa edit
     @endphp
 
     <!-- {{-- Filter Tanggal --}} -->
@@ -26,9 +28,30 @@
 
         @php
             $isToday = ($day ?? now())->isToday();
+            $isYesterday = ($day ?? now())->isYesterday();
+            $isEditable = $isToday || $isYesterday;
         @endphp
 
-        @if (!$isToday)
+        {{-- Banner untuk H-1 (Mode Revisi) --}}
+        @if ($isYesterday)
+            <div
+                class="mt-3 mb-4 p-3 rounded-lg border border-orange-300 bg-orange-50 text-orange-800 text-sm font-medium flex items-start gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <strong>MODE REVISI KEMARIN (H-1)</strong><br>
+                    Anda dapat mengedit data kemarin untuk memperbaiki kesalahan rekap. 
+                    <strong>Perhatian:</strong> Perubahan pada data kemarin akan mempengaruhi perhitungan saldo hari ini. 
+                    Pastikan revisi dilakukan dengan hati-hati.
+                </div>
+            </div>
+        @endif
+
+        {{-- Banner untuk H-2 dan sebelumnya (Read-only) --}}
+        @if (!$isToday && !$isYesterday)
             <div
                 class="mt-3 mb-4 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm font-medium flex items-start gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24"
@@ -46,32 +69,44 @@
         <!-- {{-- Ringkasan Keuangan (atas) --}} -->
         <div class="grid md:grid-cols-4 gap-4 capture-desktop-4">
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
-                <div class="text-sm opacity-70">Total Cash Laundry (Akumulasi)</div>
+                <div class="text-sm opacity-70 font-bold">Total Cash Laundry (Akumulasi)</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalCashAdj, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">Saldo kemarin: Rp
                     {{ number_format($saldoCashKemarin, 0, ',', '.') }}
                 </div>
                 <div class="text-xs text-gray-500 mt-1">
+                    @if (($openingCashForDisplay ?? 0) != 0)
+                        <div>+ Saldo tunai opening: Rp {{ number_format($openingCashForDisplay, 0, ',', '.') }}</div>
+                    @endif
                     @if (($penjualanTunaiHariIni ?? 0) != 0)
                         <div>+ Tunai hari ini: Rp {{ number_format($penjualanTunaiHariIni, 0, ',', '.') }}</div>
                     @endif
                     @if (($pelunasanBonTunaiHariIni ?? 0) != 0)
                         <div>+ Pelunasan bon (tunai): Rp {{ number_format($pelunasanBonTunaiHariIni, 0, ',', '.') }}</div>
                     @endif
-                    @if (($pengeluaranTunaiHariIni ?? 0) != 0)
-                        <div>– Pengeluaran tunai: Rp {{ number_format($pengeluaranTunaiHariIni, 0, ',', '.') }}</div>
+                    @if (($pengeluaranTunaiMurniHariIni ?? 0) != 0)
+                        <div>– Pengeluaran tunai: Rp {{ number_format($pengeluaranTunaiMurniHariIni, 0, ',', '.') }}</div>
+                    @endif
+                    @if (($tarikKasHariIni ?? 0) != 0)
+                        <div>– Tarik kas: Rp {{ number_format($tarikKasHariIni, 0, ',', '.') }}</div>
+                    @endif
+                    @if (($feeOngkirHariIni ?? 0) != 0)
+                        <div>– Fee Antar-Jemput harian: Rp {{ number_format($feeOngkirHariIni, 0, ',', '.') }}</div>
+                    @endif
+                    @if (($gajiHariIni ?? 0) != 0)
+                        <div>– Gaji: Rp {{ number_format($gajiHariIni, 0, ',', '.') }}</div>
                     @endif
                     @if (($totalFee ?? 0) != 0)
                         <div>– Fee hari ini: Rp {{ number_format($totalFee, 0, ',', '.') }}</div>
                     @endif
                     @if (($ajQrisHariIni ?? 0) != 0)
-                        <div>– Antar Jemput Qris: Rp {{ number_format($ajQrisHariIni, 0, ',', '.') }}</div>
+                        <div>– Ongkir Qris: Rp {{ number_format($ajQrisHariIni, 0, ',', '.') }}</div>
                     @endif
                 </div>
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-red-500">
-                <div class="text-sm opacity-70">Total Bon Pelanggan (Akumulasi)</div>
+                <div class="text-sm opacity-70 font-bold">Total Bon Pelanggan (Akumulasi)</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalPiutang ?? 0, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">Bon kemarin: Rp {{ number_format($bonKemarin, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">
@@ -85,7 +120,7 @@
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-yellow-500">
-                <div class="text-sm opacity-70">Total Fee Karyawan Hari ini</div>
+                <div class="text-sm opacity-70 font-bold">Total Fee Karyawan Hari ini</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalFee ?? 0, 0, ',', '.') }}</div>
 
                 {{-- Rincian kategori (muncul hanya jika ada) --}}
@@ -127,7 +162,7 @@
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
-                <div class="text-sm opacity-70">Total Omset Bersih Hari Ini</div>
+                <div class="text-sm opacity-70 font-bold">Total Omset Bersih Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalOmzetBersihHariIni, 0, ',', '.') }}</div>
                 <div class="text-xs text-gray-500 mt-1">(Kotor: Rp
                     {{ number_format($totalOmzetKotorHariIni, 0, ',', '.') }} −
@@ -140,7 +175,7 @@
         </div>
         <div class="mt-4 grid md:grid-cols-3 gap-4 capture-desktop-3">
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
-                <div class="text-sm opacity-70">Sisa Saldo Kartu Hari Ini</div>
+                <div class="text-sm opacity-70 font-bold">Sisa Saldo Kartu Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">
                     {{ is_null($saldoKartu) ? '—' : 'Rp ' . number_format($saldoKartu, 0, ',', '.') }}
                 </div>
@@ -150,14 +185,14 @@
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
-                <div class="text-sm opacity-70">Total Tap Kartu Hari Ini</div>
+                <div class="text-sm opacity-70 font-bold">Total Tap Kartu Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">
                     {{ $totalTapHariIni === null || (int) $totalTapHariIni === 0 ? '—' : (int) $totalTapHariIni }}
                 </div>
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
-                <div class="text-sm opacity-70">Tap Gagal Hari Ini</div>
+                <div class="text-sm opacity-70 font-bold">Tap Gagal Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">
                     {{ $tapGagalHariIni === null || (int) $tapGagalHariIni === 0 ? '—' : number_format($tapGagalHariIni, 0, ',', '.') }}
                 </div>
@@ -198,7 +233,7 @@
                                             class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
                                                      bg-purple-50 text-purple-700 border border-purple-200"
                                             title="Fee kurir, tidak dihitung ke omzet/cash">
-                                            Fee Antar-Jemput
+                                            Ongkir
                                         </span>
                                     @endif
                                 </td>
@@ -210,7 +245,12 @@
                                 <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
                                 <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
                                 <td class="px-3 py-2 text-center no-export">
-                                    @if ($isToday)
+                                    @php
+                                        $isBonTransaction = optional($r->metode)->nama && strtolower($r->metode->nama) === 'bon';
+                                        $canDelete = $isEditable && !($isYesterday && $isBonTransaction);
+                                    @endphp
+                                    
+                                    @if ($canDelete)
                                         <form method="POST"
                                             action="{{ route('admin.rekap.destroy-group', ['d' => request('d')]) }}"
                                             onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
@@ -220,6 +260,10 @@
                                                 value="{{ $r->metode_pembayaran_id }}">
                                             <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
                                         </form>
+                                    @elseif ($isYesterday && $isBonTransaction)
+                                        <span class="text-orange-600 text-xs font-medium" title="Transaksi BON tidak dapat dihapus di mode revisi">🔒 BON</span>
+                                    @else
+                                        <span class="text-gray-400 text-xs">—</span>
                                     @endif
                                 </td>
                             </tr>
@@ -257,20 +301,34 @@
                                     {{ $r->keterangan ?? '-' }}
 
                                     @php
-                                        // deteksi "owner draw" → hanya penanda visual
-                                        $isOwnerDraw = str($r->keterangan ?? '')
-                                            ->lower()
-                                            ->contains([
-                                                'bos',
-                                                'kanjeng',
-                                                'ambil duit',
-                                                'ambil duid',
-                                                'tarik kas',
-                                                'tarik',
-                                            ]);
+                                        $keteranganLower = strtolower($r->keterangan ?? '');
+                                        // deteksi "owner draw"
+                                        $isOwnerDraw = str_contains($keteranganLower, 'bos') || str_contains($keteranganLower, 'kanjeng') || 
+                                                       str_contains($keteranganLower, 'ambil duit') || str_contains($keteranganLower, 'ambil duid') || 
+                                                       str_contains($keteranganLower, 'tarik kas');
+                                        // deteksi "fee antar jemput / ongkir"
+                                        $isFeeOngkir = str_contains($keteranganLower, 'ongkir') || 
+                                                       str_contains($keteranganLower, 'antar jemput') ||
+                                                       str_contains($keteranganLower, 'anter jemput'); 
+                                        // deteksi "gaji"
+                                        $isGaji = str_contains($keteranganLower, 'gaji');
                                     @endphp
 
-                                    @if ($isOwnerDraw)
+                                    @if ($isFeeOngkir)
+                                        <span
+                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                          bg-orange-50 text-orange-700 border border-orange-200"
+                                            title="Fee Antar Jemput - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
+                                            Fee Antar-Jemput
+                                        </span>
+                                    @elseif ($isGaji)
+                                        <span
+                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                          bg-purple-50 text-purple-700 border border-purple-200"
+                                            title="Gaji - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
+                                            Gaji
+                                        </span>
+                                    @elseif ($isOwnerDraw)
                                         <span
                                             class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
                           bg-blue-50 text-blue-700 border border-blue-200"
@@ -282,10 +340,11 @@
                                 <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
                                 <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
                                 <td class="px-3 py-2 text-center no-export">
-                                    @if ($isToday)
+                                    @if ($isEditable)
                                         <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
                                             onsubmit="return confirm('Hapus baris ini?')">
                                             @csrf @method('DELETE')
+                                            <input type="hidden" name="d" value="{{ request('d', optional($day ?? now())->toDateString()) }}">
                                             <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
                                         </form>
                                     @else
@@ -372,7 +431,7 @@
                                             };
                                         @endphp
 
-                                        <select @disabled(!$isToday) name="metode"
+                                        <select @disabled(!$isEditable) name="metode"
                                             class="border rounded px-2 py-1 text-xs appearance-none pr-6 bg-no-repeat {{ $metColor }}"
                                             style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position:right 0.45rem center;"
                                             data-current="{{ $current }}"
@@ -449,14 +508,14 @@
 
         <!-- {{-- Tombol Input Rekap --}} -->
         <div class="mt-6 text-right">
-            @if ($isToday)
+            @if ($isEditable)
                 <a href="{{ route('admin.rekap.input', ['d' => request('d', optional($day ?? now())->toDateString())]) }}"
-                    class="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110">
+                    class="inline-flex items-center gap-2 rounded-lg {{ $isYesterday ? 'bg-orange-600' : 'bg-blue-600' }} text-white px-4 py-2 hover:brightness-110">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Input & Update Rekap
+                    {{ $isYesterday ? 'Revisi Rekap Kemarin' : 'Input & Update Rekap' }}
                 </a>
             @endif
             <button id="btn-download-jpg"

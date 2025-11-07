@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PesananLaundry;
 use App\Models\Rekap;
 use App\Models\MetodePembayaran;
-use App\Models\OpeningSetup; // <-- Tambah import
+use App\Models\OpeningSetup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -70,16 +70,47 @@ class DashboardController extends Controller
 
         $feeTotalHariIni = $feeLipatHariIni + $feeSetrika + $feeBedCover + $feeHordeng + $feeBoneka + $feeSatuan;
 
-        // (Kotor - Fee). Omzet kotor sudah exclude AJ.
-        $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni);
+        // Pengeluaran hari ini (exclude owner draw, fee ongkir, dan gaji) untuk Pendapatan Bersih Hari Ini
+        $ownerDrawWords = ['bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas'];
+        $feeOngkirWords = ['ongkir', 'anter jemput', 'antar jemput'];
+        $gajiWords = ['gaji'];
+        
+        $pengeluaranHariIni = Rekap::whereBetween('created_at', [$start, $end])
+            ->whereNull('service_id')
+            ->where(function ($q) use ($ownerDrawWords, $feeOngkirWords, $gajiWords) {
+                // Exclude owner draw
+                foreach ($ownerDrawWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+                // Exclude fee ongkir
+                foreach ($feeOngkirWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+                // Exclude gaji
+                foreach ($gajiWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+            })
+            ->sum('total');
 
-        // ====== STATUS TERBARU HARI INI ======
-        $latestToday = PesananLaundry::whereHas('statuses', fn($q) => $q->whereBetween('created_at', [$start, $end]))
-            ->with(['statuses' => fn($q) => $q->whereBetween('created_at', [$start, $end])->latest()->limit(1)])
-            ->get();
+        // Pendapatan Bersih Hari Ini = Omzet Kotor - Fee - Pengeluaran
+        $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni - $pengeluaranHariIni);
 
-        $pesananDiproses = $latestToday->filter(fn($p) => strcasecmp(optional($p->statuses->first())->keterangan, 'Diproses') === 0)->count();
-        $pesananSelesai  = $latestToday->filter(fn($p) => strcasecmp(optional($p->statuses->first())->keterangan, 'Selesai')  === 0)->count();
+        // ====== STATUS PESANAN (KESELURUHAN, bukan hanya hari ini) ======
+        // Ambil semua pesanan dengan status terakhirnya
+        $allPesanan = PesananLaundry::with(['statuses' => fn($q) => $q->latest()->limit(1)])->get();
+        
+        // Pesanan Diproses: semua pesanan dengan status terakhir "Diproses"
+        $pesananDiproses = $allPesanan->filter(function($p) {
+            $lastStatus = $p->statuses->first();
+            return $lastStatus && strcasecmp($lastStatus->keterangan, 'Diproses') === 0;
+        })->count();
+        
+        // Pesanan Selesai: semua pesanan dengan status terakhir "Selesai" DAN TIDAK disembunyikan
+        $pesananSelesai = $allPesanan->filter(function($p) {
+            $lastStatus = $p->statuses->first();
+            return !$p->is_hidden && $lastStatus && strcasecmp($lastStatus->keterangan, 'Selesai') === 0;
+        })->count();
 
         $riwayat = PesananLaundry::with(['service', 'statuses' => fn($q) => $q->latest()])->latest()->take(5)->get();
 
@@ -210,12 +241,24 @@ class DashboardController extends Controller
         }
         $omzetBulanIniGross = array_sum($chartData); // sudah exclude AJ
 
-        // Pengeluaran (agregat) – exclude owner draw
-        $ownerDrawWords = ['bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas', 'tarik'];
+        // Pengeluaran (agregat) – exclude owner draw, fee ongkir, dan gaji
+        $ownerDrawWords = ['bos', 'kanjeng', 'ambil duit', 'ambil duid', 'tarik kas'];
+        $feeOngkirWords = ['ongkir', 'anter jemput', 'antar jemput'];
+        $gajiWords = ['gaji'];
+        
         $pengeluaranBulanIni = Rekap::whereBetween('created_at', [$monthStart, $monthEnd])
             ->whereNull('service_id')
-            ->where(function ($q) use ($ownerDrawWords) {
+            ->where(function ($q) use ($ownerDrawWords, $feeOngkirWords, $gajiWords) {
+                // Exclude owner draw
                 foreach ($ownerDrawWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+                // Exclude fee ongkir
+                foreach ($feeOngkirWords as $w) {
+                    $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
+                }
+                // Exclude gaji
+                foreach ($gajiWords as $w) {
                     $q->whereRaw('LOWER(COALESCE(keterangan,"")) NOT LIKE ?', ['%' . strtolower($w) . '%']);
                 }
             })
@@ -272,6 +315,8 @@ class DashboardController extends Controller
             'totalPesananHariIni',
             'pendapatanHariIni',
             'pendapatanBersihHariIni',
+            'feeTotalHariIni',
+            'pengeluaranHariIni',
             'pesananDiproses',
             'pesananSelesai',
             'riwayat',

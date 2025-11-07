@@ -8,12 +8,16 @@
 
     // Flag: apakah halaman ini sedang melihat hari ini?
     $isToday = isset($day) ? $day->isToday() : true;
+    $isYesterday = isset($day) ? $day->isYesterday() : false;
+    $isEditable = $isToday || $isYesterday;
 @endphp
 
 @section('content')
     <div class="flex items-center justify-between">
-        <div class="text-xl md:text-2xl font-bold">Input rekap keuangan – Qxpress Laundry</div>
-        <a href="{{ route('admin.rekap.index') }}"
+        <div class="text-xl md:text-2xl font-bold">
+            {{ $isYesterday ? 'Revisi Rekap Kemarin' : 'Input rekap keuangan' }} – Qxpress Laundry
+        </div>
+        <a href="{{ route('admin.rekap.index', ['d' => request('d')]) }}"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 hover:shadow transition-all duration-150">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -23,10 +27,36 @@
         </a>
     </div>
 
-    @if (!$isToday)
+    {{-- Banner untuk H-1 (Mode Revisi) --}}
+    @if ($isYesterday)
+        <div class="mt-4 p-4 rounded-lg border border-orange-300 bg-orange-50 text-orange-800 text-sm font-medium flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <div class="font-bold text-base mb-1">⚠️ MODE REVISI KEMARIN (H-1)</div>
+                <p>Anda sedang merevisi data tanggal: <strong>{{ $day->translatedFormat('l, d F Y') }}</strong></p>
+                <p class="mt-2">
+                    <strong>Perhatian:</strong> Setiap perubahan pada data kemarin akan mempengaruhi perhitungan hari ini:
+                </p>
+                <ul class="list-disc pl-5 mt-1 space-y-1">
+                    <li>Mengubah omset/pengeluaran kemarin → Mengubah saldo kas hari ini</li>
+                    <li>Mengubah fee kemarin → Mengubah saldo kas hari ini</li>
+                    <li>Mengubah saldo kartu kemarin → Mengubah total tap hari ini</li>
+                    <li><strong>Transaksi BON tidak dapat diubah</strong> di mode revisi (hanya di halaman rekap)</li>
+                </ul>
+                <p class="mt-2 font-semibold">Pastikan revisi dilakukan dengan hati-hati dan teliti!</p>
+            </div>
+        </div>
+    @endif
+
+    {{-- Banner untuk H-2 dan sebelumnya (Read-only) --}}
+    @if (!$isEditable)
         <div class="mt-4 p-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200">
             Mode baca: Anda sedang membuka data tanggal {{ $day->translatedFormat('l, d F Y') }}.
-            <strong>Input/update dinonaktifkan</strong>. Ganti ke hari ini untuk mengedit.
+            <strong>Input/update dinonaktifkan</strong>. Hanya data hari ini dan kemarin yang dapat diedit.
         </div>
     @endif
 
@@ -47,7 +77,7 @@
                   onsubmit="return confirm('Kunci opening? Setelah dikunci tidak bisa diedit dari sini.')">
               @csrf
               @method('PATCH')
-              <button class="px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm" {{ $isToday ? '' : 'disabled' }}>
+              <button class="px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm" {{ $isEditable ? '' : 'disabled' }}>
                 Kunci
               </button>
             </form>
@@ -81,7 +111,7 @@
               <input id="init_cash_display" type="text" inputmode="numeric" autocomplete="off"
                      class="w-full border rounded px-3 py-2 pl-9"
                      value="{{ old('init_cash', optional($opening)->init_cash ? number_format((int) $opening->init_cash, 0, ',', '.') : '') }}"
-                     {{ $isToday ? '' : 'disabled' }}>
+                     {{ $isEditable ? '' : 'disabled' }}>
               <input id="init_cash" name="init_cash" type="hidden" value="{{ old('init_cash', optional($opening)->init_cash) }}">
             </div>
             @error('init_cash') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
@@ -92,13 +122,13 @@
             <label class="block text-sm mb-1">Tanggal Cutover</label>
             <input name="cutover_date" type="date" class="w-full border rounded px-3 py-2"
                    value="{{ old('cutover_date', optional(optional($opening)->cutover_date)->toDateString() ?? now()->toDateString()) }}"
-                   {{ $isToday ? '' : 'disabled' }}>
+                   {{ $isEditable ? '' : 'disabled' }}>
             @error('cutover_date') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
           </div>
 
           <div class="flex items-end">
             <button class="px-4 py-2 rounded-lg bg-gray-800 text-white hover:brightness-110 disabled:opacity-50"
-                    {{ $isToday ? '' : 'disabled' }}>
+                    {{ $isEditable ? '' : 'disabled' }}>
               Simpan Opening
             </button>
           </div>
@@ -187,7 +217,7 @@
 
                             <td class="px-3 py-2">
                                 <select class="border rounded px-2 py-1 w-56" :name="`rows[${idx}][service_id]`"
-                                    x-model="r.service_id" @disabled(!$isToday)>
+                                    x-model="r.service_id" {{ $isEditable ? '' : 'disabled' }}>
 
                                     <option value="">- Pilih Layanan -</option>
                                     @foreach ($services as $s)
@@ -199,15 +229,15 @@
                             <td class="px-3 py-2">
                                 <div class="flex items-center justify-center gap-2">
                                     <button type="button" class="h-7 w-7 rounded border" @click="dec(idx)"
-                                        {{ $isToday ? '' : 'disabled' }}>–</button>
+                                        {{ $isEditable ? '' : 'disabled' }}>–</button>
 
                                     <!-- input tanpa spinner, tetap kirim rows[idx][qty] -->
                                     <input type="text" inputmode="numeric" pattern="\d*"
                                         class="w-16 text-center border rounded px-2 py-1" :name="`rows[${idx}][qty]`"
-                                        x-model="r.qty_display" @input="syncQty(idx)" {{ $isToday ? '' : 'disabled' }}>
+                                        x-model="r.qty_display" @input="syncQty(idx)" {{ $isEditable ? '' : 'disabled' }}>
 
                                     <button type="button" class="h-7 w-7 rounded border" @click="inc(idx)"
-                                        {{ $isToday ? '' : 'disabled' }}>+</button>
+                                        {{ $isEditable ? '' : 'disabled' }}>+</button>
                                 </div>
                             </td>
 
@@ -216,8 +246,8 @@
 
                             {{-- Metode --}}
                             <td class="px-3 py-2 text-center">
-                                <select class="border rounded px-2 py-1" :name="`outs[${idx}][metode_pembayaran_id]`"
-                                    x-model="r.metode_pembayaran_id" {{ $isToday ? '' : 'disabled' }}>
+                                <select class="border rounded px-2 py-1" :name="`rows[${idx}][metode_pembayaran_id]`"
+                                    x-model="r.metode_pembayaran_id" {{ $isEditable ? '' : 'disabled' }}>
                                     @foreach ($metodes as $m)
                                         @if (strtolower($m->nama) !== 'bon')
                                             <option value="{{ $m->id }}">{{ $m->nama }}</option>
@@ -231,7 +261,7 @@
 
                             <td class="px-3 py-2 text-right">
                                 <button type="button" class="px-3 py-1 text-xs rounded bg-red-600 text-white"
-                                    @click="remove(idx)" {{ $isToday ? '' : 'disabled' }}>hapus</button>
+                                    @click="remove(idx)" {{ $isEditable ? '' : 'disabled' }}>hapus</button>
                             </td>
                         </tr>
                     </template>
@@ -240,13 +270,15 @@
         </div>
 
         <div class="mt-3 flex items-center justify-between">
-            <button type="button" class="text-sm underline" @click="add()" {{ $isToday ? '' : 'disabled' }}>+ Tambah
+            <button type="button" class="text-sm underline" @click="add()" {{ $isEditable ? '' : 'disabled' }}>+ Tambah
                 Baris</button>
 
             {{-- Submit --}}
             <form method="POST" action="{{ route('admin.rekap.store') }}">
                 @csrf
-                {{-- tidak ada input hidden "d" lagi --}}
+                @if(request('d'))
+                    <input type="hidden" name="d" value="{{ request('d') }}">
+                @endif
                 <template x-for="(r,idx) in rows" :key="'h' + idx">
                     <div class="hidden">
                         <input type="hidden" :name="`rows[${idx}][service_id]`" :value="r.service_id">
@@ -259,7 +291,7 @@
 
                 <button
                     class="inline-flex items-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110 disabled:opacity-50"
-                    {{ $isToday ? '' : 'disabled' }} title="{{ $isToday ? '' : 'Hanya bisa input di tanggal hari ini' }}">
+                    {{ $isEditable ? '' : 'disabled' }} title="{{ $isEditable ? '' : 'Hanya bisa input/edit di tanggal hari ini atau kemarin' }}">
                     Submit Omset
                 </button>
             </form>
@@ -303,7 +335,7 @@
 
                             <td class="px-3 py-2">
                                 <input class="border rounded px-2 py-1 w-56" :name="`outs[${idx}][keterangan]`"
-                                    x-model="r.keterangan" placeholder="Nama…" {{ $isToday ? '' : 'disabled' }}>
+                                    x-model="r.keterangan" placeholder="Nama…" {{ $isEditable ? '' : 'disabled' }}>
                             </td>
 
                             {{-- Harga ala input saldo kartu: prefix Rp + bertitik --}}
@@ -313,15 +345,15 @@
                                         class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
                                     <input type="text" inputmode="numeric"
                                         class="w-32 text-right border rounded pl-7 pr-2 py-1" x-model="r.subtotal_display"
-                                        @input="syncHarga(idx)" {{ $isToday ? '' : 'disabled' }}>
+                                        @input="syncHarga(idx)" {{ $isEditable ? '' : 'disabled' }}>
                                     <input type="hidden" :name="`outs[${idx}][subtotal]`" :value="r.subtotal">
                                 </div>
                             </td>
 
-                            {{-- Metode: sembunyikan opsi BON --}}
+                            {{-- Metode: BON tidak tersedia (input dari halaman pesanan) --}}
                             <td class="px-3 py-2 text-center">
                                 <select class="border rounded px-2 py-1" :name="`outs[${idx}][metode_pembayaran_id]`"
-                                    x-model="r.metode_pembayaran_id" {{ $isToday ? '' : 'disabled' }}>
+                                    x-model="r.metode_pembayaran_id" {{ $isEditable ? '' : 'disabled' }}>
                                     @foreach ($metodes as $m)
                                         @if (strtolower($m->nama) !== 'bon')
                                             <option value="{{ $m->id }}">{{ $m->nama }}</option>
@@ -332,7 +364,7 @@
 
                             <td class="px-3 py-2 text-right">
                                 <button type="button" class="px-3 py-1 text-xs rounded bg-red-600 text-white"
-                                    @click="remove(idx)" {{ $isToday ? '' : 'disabled' }}>hapus</button>
+                                    @click="remove(idx)" {{ $isEditable ? '' : 'disabled' }}>hapus</button>
                             </td>
                         </tr>
                     </template>
@@ -341,11 +373,13 @@
         </div>
 
         <div class="mt-3 flex items-center justify-between">
-            <button type="button" class="text-sm underline" @click="add()" {{ $isToday ? '' : 'disabled' }}>+ Tambah
+            <button type="button" class="text-sm underline" @click="add()" {{ $isEditable ? '' : 'disabled' }}>+ Tambah
                 Baris</button>
             <form method="POST" action="{{ route('admin.rekap.store-pengeluaran') }}">
                 @csrf
-                {{-- tidak ada input hidden "d" lagi --}}
+                @if(request('d'))
+                    <input type="hidden" name="d" value="{{ request('d') }}">
+                @endif
                 <template x-for="(r,idx) in rows" :key="'ph' + idx">
                     <div class="hidden">
                         <input type="hidden" :name="`outs[${idx}][keterangan]`" :value="r.keterangan">
@@ -358,8 +392,8 @@
 
                 <button
                     class="inline-flex items-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:brightness-110 disabled:opacity-50"
-                    {{ $isToday ? '' : 'disabled' }}
-                    title="{{ $isToday ? '' : 'Hanya bisa input di tanggal hari ini' }}">
+                    {{ $isEditable ? '' : 'disabled' }}
+                    title="{{ $isEditable ? '' : 'Hanya bisa input/edit di tanggal hari ini atau kemarin' }}">
                     Submit Pengeluaran
                 </button>
             </form>
@@ -389,7 +423,9 @@
         <form id="form-saldo-kartu" method="POST" action="{{ route('admin.rekap.store-saldo') }}"
             class="grid md:grid-cols-3 gap-3">
             @csrf
-            {{-- tidak ada input hidden "d" lagi --}}
+            @if(request('d'))
+                <input type="hidden" name="d" value="{{ request('d') }}">
+            @endif
 
             {{-- 1. Sisa Saldo --}}
             <div>
@@ -399,7 +435,7 @@
                     <input id="saldo_kartu_display" type="text" inputmode="numeric" autocomplete="off"
                         class="w-full border rounded px-3 py-2 pl-9"
                         value="{{ old('saldo_kartu') ? number_format((int) old('saldo_kartu'), 0, ',', '.') : '' }}"
-                        aria-label="Sisa saldo kartu (contoh: 4.000.000)" {{ $isToday ? '' : 'disabled' }}>
+                        aria-label="Sisa saldo kartu (contoh: 4.000.000)" {{ $isEditable ? '' : 'disabled' }}>
                     <input id="saldo_kartu" name="saldo_kartu" type="hidden" value="{{ old('saldo_kartu') }}">
                 </div>
                 @error('saldo_kartu')
@@ -413,7 +449,7 @@
                     <label class="text-sm">Total Tap Kartu Hari Ini (Jumlah)</label>
                     <input name="manual_total_tap" type="text" inputmode="numeric" pattern="\d*" autocomplete="off"
                         class="w-full border rounded px-3 py-2 mt-1" value="{{ old('manual_total_tap', 0) }}"
-                        {{ $isToday ? '' : 'disabled' }}>
+                        {{ $isEditable ? '' : 'disabled' }}>
                     @error('manual_total_tap', 'saldo')
                         <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                     @enderror
@@ -425,7 +461,7 @@
                 <label class="text-sm">Jumlah Tap Gagal (Jumlah)</label>
                 <input name="tap_gagal" type="text" inputmode="numeric" pattern="\d*" autocomplete="off"
                     class="w-full border rounded px-3 py-2 mt-1" value="{{ old('tap_gagal', 0) }}"
-                    {{ $isToday ? '' : 'disabled' }}>
+                    {{ $isEditable ? '' : 'disabled' }}>
                 @error('tap_gagal')
                     <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                 @enderror
@@ -433,8 +469,8 @@
 
             <div class="flex items-end">
                 <button class="w-full md:w-auto px-5 py-3 rounded-lg bg-blue-600 text-white disabled:opacity-50 hover:brightness-110"
-                    {{ $isToday ? '' : 'disabled' }}
-                    title="{{ $isToday ? '' : 'Hanya bisa input di tanggal hari ini' }}">
+                    {{ $isEditable ? '' : 'disabled' }}
+                    title="{{ $isEditable ? '' : 'Hanya bisa input/edit di tanggal hari ini atau kemarin' }}">
                     Submit Saldo Kartu
                 </button>
             </div>
@@ -608,3 +644,4 @@
         });
     </script>
 @endsection
+

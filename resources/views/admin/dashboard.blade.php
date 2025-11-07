@@ -5,20 +5,30 @@
 @section('content')
 {{-- ===== CARDS: HARI INI ===== --}}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  {{-- Card 1: Pendapatan Bersih Hari Ini (Tukar dengan Total Pesanan) --}}
+  <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
+    <div class="text-sm opacity-70 font-bold">Pendapatan Bersih Hari Ini</div>
+    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($pendapatanBersihHariIni,0,',','.') }}</div>
+    <div class="text-xs text-gray-500 mt-1">
+        <div>(Kotor: Rp {{ number_format($pendapatanHariIni, 0, ',', '.') }} – Fee: Rp {{ number_format($feeTotalHariIni, 0, ',', '.') }})</div>
+    </div>
+  </div>
+  
+  {{-- Card 2: Total Pesanan Hari Ini (Tukar dengan Pendapatan) --}}
   <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
-    <div class="text-sm opacity-70">Total Pesanan Hari ini</div>
+    <div class="text-sm opacity-70 font-bold">Total Pesanan Hari ini</div>
     <div class="mt-2 text-3xl font-bold">{{ $totalPesananHariIni }}</div>
   </div>
-  <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
-    <div class="text-sm opacity-70">Pendapatan Hari ini (Kotor)</div>
-    <div class="mt-2 text-3xl font-bold">Rp {{ number_format($pendapatanHariIni,0,',','.') }}</div>
-  </div>
+  
+  {{-- Card 3: Pesanan Diproses (Keseluruhan) --}}
   <div class="bg-white p-5 rounded-xl shadow border-l-4 border-yellow-500">
-    <div class="text-sm opacity-70">Pesanan Diproses</div>
+    <div class="text-sm opacity-70 font-bold">Pesanan Diproses</div>
     <div class="mt-2 text-3xl font-bold">{{ $pesananDiproses }}</div>
   </div>
+  
+  {{-- Card 4: Pesanan Selesai (Keseluruhan, exclude hidden) --}}
   <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
-    <div class="text-sm opacity-70">Pesanan Selesai</div>
+    <div class="text-sm opacity-70 font-bold">Pesanan Selesai</div>
     <div class="mt-2 text-3xl font-bold">{{ $pesananSelesai }}</div>
   </div>
 </div>
@@ -34,6 +44,7 @@
           <th class="px-3 py-2 text-left">Service</th>
           <th class="px-3 py-2 text-left">Status Terakhir</th>
           <th class="px-3 py-2 text-left">Update</th>
+          <th class="px-3 py-2 text-center">Aksi</th>
         </tr>
       </thead>
       <tbody class="
@@ -47,6 +58,12 @@
             <td class="px-3 py-2">{{ $r->service->nama_service ?? '-' }}</td>
             <td class="px-3 py-2">{{ optional($r->statuses->first())->keterangan ?? '-' }}</td>
             <td class="px-3 py-2">{{ optional($r->statuses->first())->created_at?->format('d/m/y H:i') }}</td>
+            <td class="px-3 py-2 text-center">
+              <a href="{{ route('admin.pesanan.index') }}#pesanan-{{ $r->id }}" 
+                 class="inline-flex items-center px-3 py-1 text-xs rounded bg-blue-600 text-white hover:brightness-110">
+                Lihat Detail
+              </a>
+            </td>
           </tr>
         @endforeach
       </tbody>
@@ -112,7 +129,7 @@
     <div class="grid grid-cols-2 gap-4">
       <div class="bg-white p-5 rounded-xl shadow border-l-4 border-red-500 flex items-center justify-between">
         <div>
-          <div class="text-xs uppercase tracking-wide text-gray-500">Pengeluaran Bulan {{ $monthLabel }}</div>
+          <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">Pengeluaran Bulan {{ $monthLabel }}</div>
           <div class="mt-2 text-xl font-bold">Rp {{ number_format($pengeluaranBulanIni,0,',','.') }}</div>
         </div>
         <svg class="w-8 h-8 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -122,7 +139,7 @@
 
       <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500 flex items-center justify-between">
         <div>
-          <div class="text-xs uppercase tracking-wide text-gray-500">Total Cash (s.d. hari ini)</div>
+          <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">Total Cash (s.d. hari ini)</div>
           <div class="mt-2 text-xl font-bold">Rp {{ number_format($totalCashAdj,0,',','.') }}</div>
         </div>
         <svg class="w-8 h-8 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -133,7 +150,7 @@
 
     <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500 flex items-center justify-between">
       <div>
-        <div class="text-xs uppercase tracking-wide text-gray-500">Pendapatan (Bersih) Bulan {{ $monthLabel }}</div>
+        <div class="text-xs uppercase tracking-wide text-gray-500 font-bold">Pendapatan (Bersih) Bulan {{ $monthLabel }}</div>
         <div class="mt-2 text-2xl font-bold">Rp {{ number_format($pendapatanBersihBulanIni,0,',','.') }}</div>
         <div class="text-[11px] text-gray-500 mt-1">
           Kotor: Rp {{ number_format($omzetBulanIniGross,0,',','.') }}
@@ -180,13 +197,28 @@
       ">
           @forelse($pengeluaranBulanDetail as $row)
             @php
-              $isOwnerDraw = str($row->keterangan ?? '')->lower()->contains(['bos','kanjeng','ambil duit','ambil duid','tarik kas','tarik']);
+              $keteranganLower = strtolower($row->keterangan ?? '');
+              $isOwnerDraw = str_contains($keteranganLower, 'bos') || str_contains($keteranganLower, 'kanjeng') || 
+                             str_contains($keteranganLower, 'ambil duit') || str_contains($keteranganLower, 'ambil duid') || 
+                             str_contains($keteranganLower, 'tarik kas');
+              $isFeeOngkir = str_contains($keteranganLower, 'ongkir') || 
+                             str_contains($keteranganLower, 'antar jemput') ||
+                             str_contains($keteranganLower, 'anter jemput');
+              $isGaji = str_contains($keteranganLower, 'gaji');
             @endphp
             <tr class="border-t">
               <td class="px-3 py-2">{{ optional($row->created_at)->format('d/m/Y H:i') }}</td>
               <td class="px-3 py-2">
                 {{ $row->keterangan ?? '-' }}
-                @if($isOwnerDraw)
+                @if($isFeeOngkir)
+                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-orange-50 text-orange-700 border border-orange-200" title="Fee Antar Jemput - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
+                    Ongkir
+                  </span>
+                @elseif($isGaji)
+                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-purple-50 text-purple-700 border border-purple-200" title="Gaji - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
+                    Gaji
+                  </span>
+                @elseif($isOwnerDraw)
                   <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700 border border-blue-200" title="Tidak dihitung ke agregat pengeluaran">
                     Tarik Kas
                   </span>
