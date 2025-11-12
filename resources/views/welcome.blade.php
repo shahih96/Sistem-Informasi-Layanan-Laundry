@@ -37,7 +37,7 @@
                     class="absolute inset-0 flex flex-col items-center justify-center text-center px-4
                     bg-gradient-to-t from-black/70 via-black/40 to-transparent">
                     <h1 class="text-3xl md:text-5xl font-extrabold text-white drop-shadow-[2px_2px_2px_#000000]">
-                        Welcome to RUmdim
+                        Welcome to Qxpress Laundry
                     </h1>
                     <p class="text-lg md:text-2xl text-gray-100 mt-3 drop-shadow-[2px_2px_2px_#000000]">
                         Solusi Laundry Terpercaya Anda
