@@ -71,10 +71,10 @@
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
                 <div class="text-sm opacity-70 font-bold">Total Cash Laundry (Akumulasi)</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalCashAdj, 0, ',', '.') }}</div>
-                <div class="text-xs text-gray-500 mt-1">Saldo kemarin: Rp
+                <div class="text-xs text-gray-500 mt-1 font-bold">Saldo kemarin: Rp
                     {{ number_format($saldoCashKemarin, 0, ',', '.') }}
                 </div>
-                <div class="text-xs text-gray-500 mt-1">
+                <div class="text-xs text-gray-500 mt-1 font-bold">
                     @if (($openingCashForDisplay ?? 0) != 0)
                         <div>+ Saldo tunai opening: Rp {{ number_format($openingCashForDisplay, 0, ',', '.') }}</div>
                     @endif
@@ -108,8 +108,8 @@
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-red-500">
                 <div class="text-sm opacity-70 font-bold">Total Bon Pelanggan (Akumulasi)</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalPiutang ?? 0, 0, ',', '.') }}</div>
-                <div class="text-xs text-gray-500 mt-1">Bon kemarin: Rp {{ number_format($bonKemarin, 0, ',', '.') }}</div>
-                <div class="text-xs text-gray-500 mt-1">
+                <div class="text-xs text-gray-500 mt-1 font-bold">Bon kemarin: Rp {{ number_format($bonKemarin, 0, ',', '.') }}</div>
+                <div class="text-xs text-gray-500 mt-1 font-bold">
                     @if (($bonMasukHariIni ?? 0) != 0)
                         <div>+ Bon masuk hari ini: Rp {{ number_format($bonMasukHariIni, 0, ',', '.') }}</div>
                     @endif
@@ -124,7 +124,7 @@
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalFee ?? 0, 0, ',', '.') }}</div>
 
                 {{-- Rincian kategori (muncul hanya jika ada) --}}
-                <div class="text-xs text-gray-500 mt-1">
+                <div class="text-xs text-gray-500 mt-1 font-bold">
                     @if (($kgLipatTerbayar ?? 0) > 0 && ($feeLipat ?? 0) > 0)
                         <div>Lipat {{ $kgLipatTerbayar }} Kg: Rp {{ number_format($feeLipat, 0, ',', '.') }}</div>
                     @endif
@@ -164,10 +164,10 @@
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
                 <div class="text-sm opacity-70 font-bold">Total Omset Bersih Hari Ini</div>
                 <div class="mt-2 text-3xl font-bold">Rp {{ number_format($totalOmzetBersihHariIni, 0, ',', '.') }}</div>
-                <div class="text-xs text-gray-500 mt-1">(Kotor: Rp
+                <div class="text-xs text-gray-500 mt-1 font-bold">(Kotor: Rp
                     {{ number_format($totalOmzetKotorHariIni, 0, ',', '.') }} −
                     Fee: Rp {{ number_format($totalFee, 0, ',', '.') }})</div>
-                <div class="text-xs text-gray-500 mt-1">Tunai: Rp {{ number_format($totalTunaiHariIni, 0, ',', '.') }} •
+                <div class="text-xs text-gray-500 mt-1 font-bold">Tunai: Rp {{ number_format($totalTunaiHariIni, 0, ',', '.') }} •
                     Qris:
                     Rp {{ number_format($totalQrisHariIni, 0, ',', '.') }} • Bon: Rp
                     {{ number_format($totalBonHariIni, 0, ',', '.') }}</div>
@@ -179,7 +179,7 @@
                 <div class="mt-2 text-3xl font-bold">
                     {{ is_null($saldoKartu) ? '—' : 'Rp ' . number_format($saldoKartu, 0, ',', '.') }}
                 </div>
-                <div class="text-xs text-gray-500 mt-1">
+                <div class="text-xs text-gray-500 mt-1 font-bold">
                     Saldo kartu kemarin: {{ is_null($saldoPrev) ? '—' : 'Rp ' . number_format($saldoPrev, 0, ',', '.') }}
                 </div>
             </div>
@@ -263,8 +263,8 @@
                                 <tr class="border-t">
                                     {{-- Nomor hanya di baris pertama --}}
                                     @if ($isFirstInGroup)
-                                        <td class="px-3 py-2 text-center">{{ $rowCounter }}</td>
-                                        <td class="px-3 py-2">
+                                        <td class="px-3 py-2 text-center font-bold">{{ $rowCounter }}</td>
+                                        <td class="px-3 py-2 font-bold">
                                             {{ getServiceAlias($r->service->nama_service ?? '-') }}
                                             @if (optional($r->service)->is_fee_service)
                                                 <span
@@ -280,9 +280,9 @@
                                         <td class="px-3 py-2"></td>
                                     @endif
                                     
-                                    <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-                                    <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
-                                    <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
+                                    <td class="px-3 py-2 text-center font-bold">{{ $r->metode->nama ?? '-' }}</td>
+                                    <td class="px-3 py-2 text-center font-bold">{{ $r->qty }}</td>
+                                    <td class="px-3 py-2 text-center font-bold">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
                                     <td class="px-3 py-2 text-center no-export">
                                         @php
                                             $isBonTransaction = optional($r->metode)->nama && strtolower($r->metode->nama) === 'bon';
@@ -336,8 +336,8 @@
                   ">
                         @foreach ($pengeluaran as $i => $r)
                             <tr class="border-t">
-                                <td class="px-3 py-2 text-center">{{ $pengeluaran->firstItem() + $i }}</td>
-                                <td class="px-3 py-2">
+                                <td class="px-3 py-2 text-center font-bold">{{ $pengeluaran->firstItem() + $i }}</td>
+                                <td class="px-3 py-2 font-bold">
                                     {{ $r->keterangan ?? '-' }}
 
                                     @php
@@ -377,8 +377,8 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-                                <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
+                                <td class="px-3 py-2 text-center font-bold">{{ $r->metode->nama ?? '-' }}</td>
+                                <td class="px-3 py-2 text-center font-bold">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
                                 <td class="px-3 py-2 text-center no-export">
                                     @if ($isEditable)
                                         <form method="POST" action="{{ route('admin.rekap.destroy', $r->id) }}"
@@ -441,16 +441,16 @@
                                     $metodeNow !== 'bon' && optional($p->updated_at)->between($asOfStart, $asOfEnd);
                             @endphp
                             <tr class="border-t">
-                                <td class="px-3 py-2">{{ ($bon->currentPage() - 1) * $bon->perPage() + $loop->iteration }}
+                                <td class="px-3 py-2 font-bold">{{ ($bon->currentPage() - 1) * $bon->perPage() + $loop->iteration }}
                                 </td>
 
-                                <td class="px-3 py-2">
-                                    <div class="font-medium">{{ $p->nama_pel }}</div>
+                                <td class="px-3 py-2 font-bold">
+                                    <div class="font-bold">{{ $p->nama_pel }}</div>
                                 </td>
 
-                                <td class="px-3 py-2">{{ $p->service->nama_service ?? '-' }}</td>
-                                <td class="px-3 py-2 text-center">{{ $qty }}</td>
-                                <td class="px-3 py-2 text-center">Rp {{ number_format($total, 0, ',', '.') }}</td>
+                                <td class="px-3 py-2 font-bold">{{ $p->service->nama_service ?? '-' }}</td>
+                                <td class="px-3 py-2 text-center font-bold">{{ $qty }}</td>
+                                <td class="px-3 py-2 text-center font-bold">Rp {{ number_format($total, 0, ',', '.') }}</td>
 
                                 {{-- Metode (dropdown) --}}
                                 <td class="px-3 py-2 text-center">
@@ -494,7 +494,7 @@
                                     </form>
 
                                     {{-- Teks statis pengganti (hanya tampil saat export) --}}
-                                    <span class="export-only hidden text-xs">
+                                    <span class="export-only hidden text-xs font-bold">
                                         @switch($current)
                                             @case('tunai')
                                                 Tunai
@@ -531,7 +531,7 @@
                                 </td>
 
                                 {{-- Tanggal Masuk --}}
-                                <td class="px-3 py-2 text-center">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
+                                <td class="px-3 py-2 text-center font-bold">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
                             </tr>
                             @empty
                                 <tr>
