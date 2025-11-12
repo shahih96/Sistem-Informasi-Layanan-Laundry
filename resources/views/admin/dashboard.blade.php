@@ -218,21 +218,27 @@
                              str_contains($keteranganLower, 'antar jemput') ||
                              str_contains($keteranganLower, 'anter jemput');
               $isGaji = str_contains($keteranganLower, 'gaji');
+              
+              // cek apakah ada badge yang akan ditampilkan
+              $hasBadge = $isFeeOngkir || $isGaji || $isOwnerDraw;
             @endphp
             <tr class="border-t">
-              <td class="px-3 py-2">{{ optional($row->created_at)->format('d/m/Y H:i') }}</td>
+              <td class="px-3 py-2">{{ optional($row->created_at)->format('d/m/Y') }}</td>
               <td class="px-3 py-2">
-                {{ $row->keterangan ?? '-' }}
+                @if (!$hasBadge)
+                  {{ $row->keterangan ?? '-' }}
+                @endif
+                
                 @if($isFeeOngkir)
-                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-orange-50 text-orange-700 border border-orange-200" title="Fee Antar Jemput - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
-                    Ongkir
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-orange-50 text-orange-700 border border-orange-200" title="Fee Antar Jemput - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
+                    Fee Antar-Jemput
                   </span>
                 @elseif($isGaji)
-                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-purple-50 text-purple-700 border border-purple-200" title="Gaji - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-purple-50 text-purple-700 border border-purple-200" title="Gaji - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
                     Gaji
                   </span>
                 @elseif($isOwnerDraw)
-                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700 border border-blue-200" title="Tidak dihitung ke agregat pengeluaran">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-blue-50 text-blue-700 border border-blue-200" title="Tidak dihitung ke agregat pengeluaran">
                     Tarik Kas
                   </span>
                 @endif

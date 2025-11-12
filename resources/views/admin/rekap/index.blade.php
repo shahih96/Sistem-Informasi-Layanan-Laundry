@@ -536,7 +536,7 @@
                                 </td>
 
                                 {{-- Tanggal Masuk --}}
-                                <td class="px-3 py-2 text-center font-bold">{{ optional($p->created_at)->format('d/m/Y H:i') }}</td>
+                                <td class="px-3 py-2 text-center font-bold">{{ optional($p->created_at)->format('d/m/Y') }}</td>
                             </tr>
                             @empty
                                 <tr>
