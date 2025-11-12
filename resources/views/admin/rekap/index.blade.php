@@ -6,7 +6,7 @@
     @php
         $isToday = ($day ?? now())->isToday();
         $isYesterday = ($day ?? now())->isYesterday();
-        $isEditable = $isToday || $isYesterday; // H atau H-1 bisa edit
+        $isEditable = $isToday || $isYesterday;
     @endphp
 
     <!-- {{-- Filter Tanggal --}} -->
@@ -209,9 +209,8 @@
                         <tr>
                             <th class="px-3 py-2">No</th>
                             <th class="px-3 py-2 text-left">Nama Layanan</th>
-                            <th class="px-3 py-2 text-center">Kuantitas</th>
-                            <th class="px-3 py-2 text-center">Harga</th>
                             <th class="px-3 py-2 text-center">Metode</th>
+                            <th class="px-3 py-2 text-center">Kuantitas</th>
                             <th class="px-3 py-2 text-center">Total</th>
                             <th class="px-3 py-2 text-center no-export">Aksi</th>
                         </tr>
@@ -222,51 +221,92 @@
                     [&_tr:nth-child(even)]:bg-white
                     [&_tr:hover]:bg-amber-50/40
                   ">
-                        @foreach ($omset as $i => $r)
-                            <tr class="border-t">
-                                <td class="px-3 py-2 text-center">
-                                    {{ ($omset->currentPage() - 1) * $omset->perPage() + $loop->iteration }}</td>
-                                <td class="px-3 py-2">
-                                    {{ $r->service->nama_service ?? '-' }}
-                                    @if (optional($r->service)->is_fee_service)
-                                        <span
-                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
-                                                     bg-purple-50 text-purple-700 border border-purple-200"
-                                            title="Fee kurir, tidak dihitung ke omzet/cash">
-                                            Ongkir
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
-                                <td class="px-3 py-2 text-center">
-                                    Rp
-                                    {{ number_format((int) floor(($r->total ?? 0) / max(1, (int) ($r->qty ?? 1))), 0, ',', '.') }}
-                                </td>
-                                <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
-                                <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
-                                <td class="px-3 py-2 text-center no-export">
-                                    @php
-                                        $isBonTransaction = optional($r->metode)->nama && strtolower($r->metode->nama) === 'bon';
-                                        $canDelete = $isEditable && !($isYesterday && $isBonTransaction);
-                                    @endphp
-                                    
-                                    @if ($canDelete)
-                                        <form method="POST"
-                                            action="{{ route('admin.rekap.destroy-group', ['d' => request('d')]) }}"
-                                            onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
-                                            @csrf @method('DELETE')
-                                            <input type="hidden" name="service_id" value="{{ $r->service_id }}">
-                                            <input type="hidden" name="metode_pembayaran_id"
-                                                value="{{ $r->metode_pembayaran_id }}">
-                                            <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
-                                        </form>
-                                    @elseif ($isYesterday && $isBonTransaction)
-                                        <span class="text-orange-600 text-xs font-medium" title="Transaksi BON tidak dapat dihapus di mode revisi">🔒 BON</span>
+                        @php
+                            // Fungsi untuk aliasing nama layanan
+                            function getServiceAlias($namaService) {
+                                $aliases = [
+                                    'Cuci Self Service Max 7Kg' => 'Cuci',
+                                    'Cuci Setrika Regular (/Kg)' => 'CKS R',
+                                    'Kering Self Service Max 7Kg' => 'Kering',
+                                    'Cuci Lipat Express Max 7Kg' => 'CKL E',
+                                    'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
+                                    'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
+                                    'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
+                                    'Cuci Lipat Regular (/Kg)' => 'CKL R',
+                                ];
+                                return $aliases[$namaService] ?? $namaService;
+                            }
+                            
+                            // Urutkan berdasarkan nama layanan (abjad), lalu metode
+                            $sortedOmset = $omset->sortBy(function($item) {
+                                $metodeName = strtolower($item->metode->nama ?? '');
+                                // Prioritas: tunai (1), qris (2), lainnya (3)
+                                $metodePriority = match($metodeName) {
+                                    'tunai' => 1,
+                                    'qris' => 2,
+                                    default => 3,
+                                };
+                                return ($item->service->nama_service ?? '') . '_' . $metodePriority;
+                            });
+                            
+                            // Group berdasarkan service_id
+                            $groupedOmset = $sortedOmset->groupBy('service_id');
+                            $rowCounter = ($omset->currentPage() - 1) * $omset->perPage();
+                        @endphp
+                        
+                        @foreach ($groupedOmset as $serviceId => $items)
+                            @foreach ($items as $idx => $r)
+                                @php
+                                    $isFirstInGroup = $idx === 0;
+                                    if ($isFirstInGroup) $rowCounter++;
+                                @endphp
+                                <tr class="border-t">
+                                    {{-- Nomor hanya di baris pertama --}}
+                                    @if ($isFirstInGroup)
+                                        <td class="px-3 py-2 text-center">{{ $rowCounter }}</td>
+                                        <td class="px-3 py-2">
+                                            {{ getServiceAlias($r->service->nama_service ?? '-') }}
+                                            @if (optional($r->service)->is_fee_service)
+                                                <span
+                                                    class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                                                             bg-purple-50 text-purple-700 border border-purple-200"
+                                                    title="Fee kurir, tidak dihitung ke omzet/cash">
+                                                    Ongkir
+                                                </span>
+                                            @endif
+                                        </td>
                                     @else
-                                        <span class="text-gray-400 text-xs">—</span>
+                                        <td class="px-3 py-2 text-center"></td>
+                                        <td class="px-3 py-2"></td>
                                     @endif
-                                </td>
-                            </tr>
+                                    
+                                    <td class="px-3 py-2 text-center">{{ $r->metode->nama ?? '-' }}</td>
+                                    <td class="px-3 py-2 text-center">{{ $r->qty }}</td>
+                                    <td class="px-3 py-2 text-center">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
+                                    <td class="px-3 py-2 text-center no-export">
+                                        @php
+                                            $isBonTransaction = optional($r->metode)->nama && strtolower($r->metode->nama) === 'bon';
+                                            $canDelete = $isEditable && !($isYesterday && $isBonTransaction);
+                                        @endphp
+                                        
+                                        @if ($canDelete)
+                                            <form method="POST"
+                                                action="{{ route('admin.rekap.destroy-group', ['d' => request('d')]) }}"
+                                                onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
+                                                @csrf @method('DELETE')
+                                                <input type="hidden" name="service_id" value="{{ $r->service_id }}">
+                                                <input type="hidden" name="metode_pembayaran_id"
+                                                    value="{{ $r->metode_pembayaran_id }}">
+                                                <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
+                                            </form>
+                                        @elseif ($isYesterday && $isBonTransaction)
+                                            <span class="text-orange-600 text-xs font-medium" title="Transaksi BON tidak dapat dihapus di mode revisi">🔒 BON</span>
+                                        @else
+                                            <span class="text-gray-400 text-xs">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
                         @endforeach
                     </tbody>
                 </table>

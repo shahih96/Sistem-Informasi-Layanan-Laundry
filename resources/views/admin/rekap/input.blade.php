@@ -198,9 +198,8 @@
                     <tr>
                         <th class="px-3 py-2 text-left">No</th>
                         <th class="px-3 py-2 text-left">Nama Layanan</th>
+                        <th class="px-3 py-2 text-left">Metode</th>
                         <th class="px-3 py-2 text-center">Kuantitas</th>
-                        <th class="px-3 py-2 text-right">Harga</th>
-                        <th class="px-3 py-2 text-center">Metode</th>
                         <th class="px-3 py-2 text-right">Total</th>
                         <th class="px-3 py-2"></th>
                     </tr>
@@ -211,17 +210,53 @@
                 [&_tr:nth-child(even)]:bg-white
                 [&_tr:hover]:bg-amber-50/40
               ">
+                    @php
+                        // Fungsi untuk aliasing nama layanan
+                        function getServiceAliasInput($namaService) {
+                            $aliases = [
+                                'Cuci Self Service Max 7Kg' => 'Cuci',
+                                'Cuci Setrika Regular (/Kg)' => 'CKS R',
+                                'Kering Self Service Max 7Kg' => 'Kering',
+                                'Cuci Lipat Express Max 7Kg' => 'CKL E',
+                                'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
+                                'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
+                                'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
+                                'Cuci Lipat Regular (/Kg)' => 'CKL R',
+                            ];
+                            return $aliases[$namaService] ?? $namaService;
+                        }
+                        
+                        // Urutkan services berdasarkan abjad
+                        $sortedServices = $services->sortBy('nama_service');
+                    @endphp
+                    
                     <template x-for="(r,idx) in rows" :key="idx">
                         <tr class="border-t">
                             <td class="px-3 py-2" x-text="idx+1"></td>
 
-                            <td class="px-3 py-2">
-                                <select class="border rounded px-2 py-1 w-56" :name="`rows[${idx}][service_id]`"
-                                    x-model="r.service_id" {{ $isEditable ? '' : 'disabled' }}>
+                            <!-- Layanan -->
+                            <td class="px-2 py-2">
+                                <select x-model="r.service_id" 
+                                    class="border-2 border-gray-300 rounded-lg px-2 py-1.5 w-40 text-sm font-medium appearance-none bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                                    style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; padding-right: 2rem;"
+                                    {{ $isEditable ? '' : 'disabled' }}>
+                                    <option value="">— Pilih —</option>
+                                    @foreach ($sortedServices as $s)
+                                        <option value="{{ $s->id }}">{{ getServiceAliasInput($s->nama_service) }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
 
-                                    <option value="">- Pilih Layanan -</option>
-                                    @foreach ($services as $s)
-                                        <option value="{{ $s->id }}">{{ $s->nama_service }}</option>
+                            <!-- Metode -->
+                            <td class="px-2 py-2">
+                                <select x-model="r.metode_pembayaran_id" 
+                                    class="border-2 border-gray-300 rounded-lg px-3 py-1.5 w-28 text-sm font-medium appearance-none bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                                    style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; padding-right: 2rem;"
+                                    {{ $isEditable ? '' : 'disabled' }}>
+                                    @foreach ($metodes as $m)
+                                        @if (strtolower($m->nama) !== 'bon')
+                                            <option value="{{ $m->id }}">{{ $m->nama }}</option>
+                                        @endif
                                     @endforeach
                                 </select>
                             </td>
@@ -239,21 +274,6 @@
                                     <button type="button" class="h-7 w-7 rounded border" @click="inc(idx)"
                                         {{ $isEditable ? '' : 'disabled' }}>+</button>
                                 </div>
-                            </td>
-
-                            {{-- Harga satuan (auto dari services) --}}
-                            <td class="px-3 py-2 text-right" x-text="formatRupiah(unitPrice(r.service_id))"></td>
-
-                            {{-- Metode --}}
-                            <td class="px-3 py-2 text-center">
-                                <select class="border rounded px-2 py-1" :name="`rows[${idx}][metode_pembayaran_id]`"
-                                    x-model="r.metode_pembayaran_id" {{ $isEditable ? '' : 'disabled' }}>
-                                    @foreach ($metodes as $m)
-                                        @if (strtolower($m->nama) !== 'bon')
-                                            <option value="{{ $m->id }}">{{ $m->nama }}</option>
-                                        @endif
-                                    @endforeach
-                                </select>
                             </td>
 
                             {{-- Total (qty × harga) --}}

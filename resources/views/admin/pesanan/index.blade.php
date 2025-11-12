@@ -43,12 +43,34 @@
 
                 <div>
                     <label class="text-sm">Layanan <span class="text-red-500">*</span></label>
-                    <select name="service_id" class="mt-1 w-full border rounded px-3 py-2" required>
-                        <option value="">- Pilih Layanan -</option>
-                        @foreach ($services as $s)
+                    <select name="service_id" 
+                        class="mt-1 w-full border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                        style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; padding-right: 2.5rem;"
+                        required>
+                        <option value="">— Pilih —</option>
+                        @php
+                            // Fungsi untuk aliasing nama layanan (migrasi bon)
+                            function getServiceAliasMigrasi($namaService) {
+                                $aliases = [
+                                    'Cuci Self Service Max 7Kg' => 'Cuci',
+                                    'Cuci Setrika Regular (/Kg)' => 'CKS R',
+                                    'Kering Self Service Max 7Kg' => 'Kering',
+                                    'Cuci Lipat Express Max 7Kg' => 'CKL E',
+                                    'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
+                                    'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
+                                    'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
+                                    'Cuci Lipat Regular (/Kg)' => 'CKL R',
+                                ];
+                                return $aliases[$namaService] ?? $namaService;
+                            }
+                            
+                            // Urutkan services berdasarkan abjad (migrasi bon)
+                            $sortedServicesMigrasi = $services->sortBy('nama_service');
+                        @endphp
+                        @foreach ($sortedServicesMigrasi as $s)
                             @if (!$s->is_fee_service)
                                 <option value="{{ $s->id }}" @selected(old('service_id') == $s->id)>
-                                    {{ $s->nama_service }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
+                                    {{ getServiceAliasMigrasi($s->nama_service) }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
                                 </option>
                             @endif
                         @endforeach
@@ -128,12 +150,34 @@
             <!-- Pilih Layanan -->
             <div>
                 <label class="text-sm">Pilih Layanan</label>
-                <select name="service_id" class="mt-1 w-full border rounded px-3 py-2" required>
-                    <option value="">- Pilih Layanan -</option>
-                    @foreach ($services as $s)
+                <select name="service_id" 
+                    class="mt-1 w-full border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; padding-right: 2.5rem;"
+                    required>
+                    <option value="">— Pilih —</option>
+                    @php
+                        // Fungsi untuk aliasing nama layanan
+                        function getServiceAliasPesanan($namaService) {
+                            $aliases = [
+                                'Cuci Self Service Max 7Kg' => 'Cuci',
+                                'Cuci Setrika Regular (/Kg)' => 'CKS R',
+                                'Kering Self Service Max 7Kg' => 'Kering',
+                                'Cuci Lipat Express Max 7Kg' => 'CKL E',
+                                'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
+                                'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
+                                'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
+                                'Cuci Lipat Regular (/Kg)' => 'CKL R',
+                            ];
+                            return $aliases[$namaService] ?? $namaService;
+                        }
+                        
+                        // Urutkan services berdasarkan abjad
+                        $sortedServicesPesanan = $services->sortBy('nama_service');
+                    @endphp
+                    @foreach ($sortedServicesPesanan as $s)
                         @if (!$s->is_fee_service)
                             <option value="{{ $s->id }}" @selected(old('service_id') == $s->id)>
-                                {{ $s->nama_service }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
+                                {{ getServiceAliasPesanan($s->nama_service) }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
                             </option>
                         @endif
                     @endforeach
@@ -150,7 +194,10 @@
             <!-- Metode Pembayaran -->
             <div>
                 <label class="text-sm">Metode Pembayaran</label>
-                <select name="metode_pembayaran_id" class="mt-1 w-full border rounded px-3 py-2" required>
+                <select name="metode_pembayaran_id" 
+                    class="mt-1 w-full border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; padding-right: 2.5rem;"
+                    required>
                     @foreach ($metodes as $m)
                         <option value="{{ $m->id }}" @selected(old('metode_pembayaran_id') == $m->id || (strtolower($m->nama) === 'bon' && !old('metode_pembayaran_id')))>{{ ucfirst($m->nama) }}</option>
                     @endforeach
@@ -160,7 +207,10 @@
             <!-- Status Awal -->
             <div>
                 <label class="text-sm">Status Pesanan</label>
-                <select name="status_awal" class="mt-1 w-full border rounded px-3 py-2" required>
+                <select name="status_awal" 
+                    class="mt-1 w-full border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; padding-right: 2.5rem;"
+                    required>
                     <option @selected(old('status_awal') === 'Diproses')>Diproses</option>
                     <option @selected(old('status_awal') === 'Selesai')>Selesai</option>
                 </select>
