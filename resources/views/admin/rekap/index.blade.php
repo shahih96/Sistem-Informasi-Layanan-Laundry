@@ -338,8 +338,6 @@
                             <tr class="border-t">
                                 <td class="px-3 py-2 text-center font-bold">{{ $pengeluaran->firstItem() + $i }}</td>
                                 <td class="px-3 py-2 font-bold">
-                                    {{ $r->keterangan ?? '-' }}
-
                                     @php
                                         $keteranganLower = strtolower($r->keterangan ?? '');
                                         // deteksi "owner draw"
@@ -352,25 +350,32 @@
                                                        str_contains($keteranganLower, 'anter jemput'); 
                                         // deteksi "gaji"
                                         $isGaji = str_contains($keteranganLower, 'gaji');
+                                        
+                                        // cek apakah ada badge yang akan ditampilkan
+                                        $hasBadge = $isFeeOngkir || $isGaji || $isOwnerDraw;
                                     @endphp
+
+                                    @if (!$hasBadge)
+                                        {{ $r->keterangan ?? '-' }}
+                                    @endif
 
                                     @if ($isFeeOngkir)
                                         <span
-                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-[11px]
                           bg-orange-50 text-orange-700 border border-orange-200"
                                             title="Fee Antar Jemput - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
                                             Fee Antar-Jemput
                                         </span>
                                     @elseif ($isGaji)
                                         <span
-                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-[11px]
                           bg-purple-50 text-purple-700 border border-purple-200"
                                             title="Gaji - Hanya mengurangi Total Cash, tidak masuk perhitungan Pengeluaran">
                                             Gaji
                                         </span>
                                     @elseif ($isOwnerDraw)
                                         <span
-                                            class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px]
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-[11px]
                           bg-blue-50 text-blue-700 border border-blue-200"
                                             title="Tidak dihitung sebagai pengeluaran bulan ini">
                                             Tarik Kas
