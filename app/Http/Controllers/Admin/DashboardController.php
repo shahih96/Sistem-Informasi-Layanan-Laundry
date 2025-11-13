@@ -25,6 +25,7 @@ class DashboardController extends Controller
         // filter layanan non-fee (exclude AJ)
         $svcNotFee = function ($q) { $q->where('is_fee_service', false); };
 
+        // Total Pesanan Hari Ini: pesanan yang dibuat hari ini
         $totalPesananHariIni = PesananLaundry::whereBetween('created_at', [$start, $end])->count();
 
         // Pendapatan (kotor) HARI INI -> EXCLUDE layanan fee (AJ)
@@ -96,21 +97,28 @@ class DashboardController extends Controller
         // Pendapatan Bersih Hari Ini = Omzet Kotor - Fee - Pengeluaran
         $pendapatanBersihHariIni = max(0, $pendapatanHariIni - $feeTotalHariIni);
 
-        // ====== STATUS PESANAN (KESELURUHAN, bukan hanya hari ini) ======
+        // ====== STATUS PESANAN ======
         // Ambil semua pesanan dengan status terakhirnya
         $allPesanan = PesananLaundry::with(['statuses' => fn($q) => $q->latest()->limit(1)])->get();
         
-        // Pesanan Diproses: semua pesanan dengan status terakhir "Diproses"
+        // Pesanan Diproses: SEMUA pesanan (sampai hari ini) dengan status terakhir "Diproses"
         $pesananDiproses = $allPesanan->filter(function($p) {
             $lastStatus = $p->statuses->first();
             return $lastStatus && strcasecmp($lastStatus->keterangan, 'Diproses') === 0;
         })->count();
         
-        // Pesanan Selesai: semua pesanan dengan status terakhir "Selesai" DAN TIDAK disembunyikan
-        $pesananSelesai = $allPesanan->filter(function($p) {
-            $lastStatus = $p->statuses->first();
-            return !$p->is_hidden && $lastStatus && strcasecmp($lastStatus->keterangan, 'Selesai') === 0;
-        })->count();
+        // Pesanan Selesai: pesanan yang status "Selesai" dibuat HARI INI saja
+        $pesananSelesai = PesananLaundry::with(['statuses' => function($q) use ($start, $end) {
+                $q->where('keterangan', 'Selesai')
+                  ->whereBetween('created_at', [$start, $end])
+                  ->latest()
+                  ->limit(1);
+            }])
+            ->whereHas('statuses', function($q) use ($start, $end) {
+                $q->where('keterangan', 'Selesai')
+                  ->whereBetween('created_at', [$start, $end]);
+            })
+            ->count();
 
         $riwayat = PesananLaundry::with(['service', 'statuses' => fn($q) => $q->latest()])->latest()->take(5)->get();
 
@@ -234,6 +242,7 @@ class DashboardController extends Controller
         $period = CarbonPeriod::create($monthStart, '1 day', $monthEnd);
         $chartLabels = [];
         $chartData = [];
+        /** @var \Carbon\Carbon $d */
         foreach ($period as $d) {
             $key = $d->format('Y-m-d');
             $chartLabels[] = $key;
@@ -343,7 +352,7 @@ class DashboardController extends Controller
     }
 
     // ==== Helper: total KG lipat kumulatif s.d. $until (EXCLUDE bed cover) ====
-    private function sumKgLipatUntil($until): int
+    private function sumKgLipatUntil(\Carbon\Carbon $until): int
     {
         $rows = Rekap::with('service')
             ->whereNotNull('service_id')

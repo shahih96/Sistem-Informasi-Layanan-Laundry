@@ -141,18 +141,8 @@
             <!-- Nomor HP -->
             <div class="relative">
                 <label class="text-sm">No. HP</label>
-                <input name="no_hp_pel" x-model="hp" @input="onHpInput()" @blur="hideSoon('hp')" @focus="showList('hp')"
+                <input name="no_hp_pel" x-model="hp"
                        autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
-                <div x-show="openHp && hpSaran.length"
-                     class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow" @mousedown.prevent>
-                    <template x-for="s in hpSaran" :key="s.key">
-                        <button type="button" class="block w-full text-left px-3 py-2 hover:bg-gray-50"
-                                @click="applySuggestion(s)">
-                            <div class="font-medium" x-text="s.hp"></div>
-                            <div class="text-xs text-gray-500" x-text="s.nama"></div>
-                        </button>
-                    </template>
-                </div>
             </div>
 
             <!-- Pilih Layanan -->
@@ -396,27 +386,26 @@
             }).filter(x=>x.score<=3||x.score<=1).sort((a,b)=>a.score-b.score).slice(0,6);
         }
 
-        function rankByHp(q){
-            q = onlyDigits(q); if(!q) return [];
-            return CUSTOMERS.map((c,i)=>{
-                const h = onlyDigits(c.hp);
-                const s = (h.startsWith(q)?0:h.includes(q)?1:lev(h,q));
-                return {key:i, ...c, score:s};
-            }).filter(x=>x.score<=3||x.score<=1).sort((a,b)=>a.score-b.score).slice(0,6);
-        }
-
         function pelangganPicker(){
             return {
                 nama: @json(old('nama_pel','')),
                 hp: @json(old('no_hp_pel','')),
-                openNama:false, openHp:false,
-                namaSaran:[], hpSaran:[],
+                openNama:false,
+                namaSaran:[],
                 hideTimer:null,
-                showList(w){ if(w==='nama') this.openNama = true; else this.openHp = true; },
-                hideSoon(w){ clearTimeout(this.hideTimer); this.hideTimer=setTimeout(()=>{ if(w==='nama') this.openNama=false; else this.openHp=false; },120); },
-                onNamaInput(){ this.namaSaran = rankByName(this.nama); this.openNama = !!this.namaSaran.length; const e = CUSTOMERS.find(c=>norm(c.nama)===norm(this.nama)); if(e && !this.hp) this.hp = e.hp; },
-                onHpInput(){ this.hpSaran = rankByHp(this.hp); this.openHp = !!this.hpSaran.length; const e = CUSTOMERS.find(c=>onlyDigits(c.hp)===onlyDigits(this.hp)); if(e && !this.nama) this.nama = e.nama; },
-                applySuggestion(s){ this.nama=s.nama; this.hp=s.hp; this.openNama=false; this.openHp=false; }
+                showList(w){ if(w==='nama') this.openNama = true; },
+                hideSoon(w){ clearTimeout(this.hideTimer); this.hideTimer=setTimeout(()=>{ if(w==='nama') this.openNama=false; },120); },
+                onNamaInput(){ 
+                    this.namaSaran = rankByName(this.nama); 
+                    this.openNama = !!this.namaSaran.length; 
+                    const e = CUSTOMERS.find(c=>norm(c.nama)===norm(this.nama)); 
+                    if(e && !this.hp) this.hp = e.hp;
+                },
+                applySuggestion(s){ 
+                    this.nama=s.nama; 
+                    this.hp=s.hp; 
+                    this.openNama=false;
+                }
             }
         }
     </script>
