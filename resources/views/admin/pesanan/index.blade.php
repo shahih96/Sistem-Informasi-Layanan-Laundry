@@ -64,8 +64,16 @@
                                 return $aliases[$namaService] ?? $namaService;
                             }
                             
+                            // Layanan yang TIDAK boleh muncul (sama seperti form pesanan utama)
+                            $excludedServicesMigrasi = ['Cuci Self Service Max 7Kg', 'Kering Self Service Max 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (>5KM)'];
+                            
+                            // Filter: ambil yang BUKAN termasuk excluded
+                            $filteredServicesMigrasi = $services->filter(function($s) use ($excludedServicesMigrasi) {
+                                return !in_array($s->nama_service, $excludedServicesMigrasi);
+                            });
+                            
                             // Urutkan services berdasarkan abjad (migrasi bon)
-                            $sortedServicesMigrasi = $services->sortBy('nama_service');
+                            $sortedServicesMigrasi = $filteredServicesMigrasi->sortBy('nama_service');
                         @endphp
                         @foreach ($sortedServicesMigrasi as $s)
                             @if (!$s->is_fee_service)
@@ -171,8 +179,16 @@
                             return $aliases[$namaService] ?? $namaService;
                         }
                         
+                        // Layanan yang TIDAK boleh muncul (kebalikan dari tabel omset rekap)
+                        $excludedServices = ['Cuci Self Service Max 7Kg', 'Kering Self Service Max 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (>5KM)'];
+                        
+                        // Filter: ambil yang BUKAN termasuk excluded
+                        $filteredServicesPesanan = $services->filter(function($s) use ($excludedServices) {
+                            return !in_array($s->nama_service, $excludedServices);
+                        });
+                        
                         // Urutkan services berdasarkan abjad
-                        $sortedServicesPesanan = $services->sortBy('nama_service');
+                        $sortedServicesPesanan = $filteredServicesPesanan->sortBy('nama_service');
                     @endphp
                     @foreach ($sortedServicesPesanan as $s)
                         @if (!$s->is_fee_service)
