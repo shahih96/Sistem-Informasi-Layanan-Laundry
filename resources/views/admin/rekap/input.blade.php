@@ -226,8 +226,14 @@
                             return $aliases[$namaService] ?? $namaService;
                         }
                         
+                        // Filter hanya layanan tertentu untuk tabel omset
+                        $allowedServices = ['Cuci Self Service Max 7Kg', 'Kering Self Service Max 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (>5KM)'];
+                        $filteredServices = $services->filter(function($s) use ($allowedServices) {
+                            return in_array($s->nama_service, $allowedServices);
+                        });
+                        
                         // Urutkan services berdasarkan abjad
-                        $sortedServices = $services->sortBy('nama_service');
+                        $sortedServices = $filteredServices->sortBy('nama_service');
                     @endphp
                     
                     <template x-for="(r,idx) in rows" :key="idx">
