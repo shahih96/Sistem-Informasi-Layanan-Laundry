@@ -30,16 +30,16 @@ class PesananLaundryController extends Controller
             $statusKeterangan = optional($lastStatus)->keterangan ?? 'Diproses';
             
             // Sorting priority:
-            // 1. is_hidden = true (paling bawah)
-            // 2. Status "Diproses" (di bawah yang Selesai, tapi di atas yang hidden)
-            // 3. Status "Selesai" (paling atas untuk yang tidak hidden)
+            // Prioritas 1 (Paling Atas): Status "Diproses" dan tidak disembunyikan
+            // Prioritas 2 (Tengah): Status "Selesai" dan tidak disembunyikan
+            // Prioritas 3 (Paling Bawah): Pesanan yang sudah disembunyikan (is_hidden = true)
             
             if ($p->is_hidden) {
-                return 3; // Paling bawah
+                return 3; // Paling bawah - yang sudah disembunyikan
             } elseif (strcasecmp($statusKeterangan, 'Diproses') === 0) {
-                return 2; // Di tengah (tidak hidden tapi belum selesai)
+                return 1; // Paling atas - Diproses yang tidak hidden
             } else {
-                return 1; // Paling atas (Selesai dan tidak hidden)
+                return 2; // Tengah - Selesai yang tidak hidden
             }
         })
         ->values(); // Reset keys setelah sort
