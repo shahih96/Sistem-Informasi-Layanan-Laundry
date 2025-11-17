@@ -289,21 +289,13 @@
                                             $canDelete = $isEditable && !($isYesterday && $isBonTransaction);
                                         @endphp
                                         
-                                        @if ($canDelete)
-                                            <form method="POST"
-                                                action="{{ route('admin.rekap.destroy-group', ['d' => request('d')]) }}"
-                                                onsubmit="return confirm('Hapus seluruh baris pada grup ini?')">
-                                                @csrf @method('DELETE')
-                                                <input type="hidden" name="service_id" value="{{ $r->service_id }}">
-                                                <input type="hidden" name="metode_pembayaran_id"
-                                                    value="{{ $r->metode_pembayaran_id }}">
-                                                <button class="px-3 py-1 text-xs rounded bg-red-600 text-white">Hapus</button>
-                                            </form>
-                                        @elseif ($isYesterday && $isBonTransaction)
-                                            <span class="text-orange-600 text-xs font-medium" title="Transaksi BON tidak dapat dihapus di mode revisi">🔒 BON</span>
-                                        @else
-                                            <span class="text-gray-400 text-xs">—</span>
-                                        @endif
+                                        {{-- Tombol hapus selalu tampil tapi disabled (diblokir) --}}
+                                        <button type="button" 
+                                            class="px-3 py-1 text-xs rounded bg-gray-400 text-white cursor-not-allowed opacity-60" 
+                                            disabled
+                                            title="Tombol hapus dinonaktifkan sementara">
+                                            Hapus
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach

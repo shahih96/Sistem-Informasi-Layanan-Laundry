@@ -18,11 +18,44 @@ class PesananLaundryController extends Controller
 {
     public function index()
     {
-        $pesanan  = PesananLaundry::with([
+        $pesanan = PesananLaundry::with([
             'service',
             'metode',
             'statuses' => fn($q) => $q->latest(),
-        ])->latest()->paginate(15);
+        ])
+        ->get()
+        ->sortBy(function($p) {
+            // Ambil status terakhir
+            $lastStatus = $p->statuses->first();
+            $statusKeterangan = optional($lastStatus)->keterangan ?? 'Diproses';
+            
+            // Sorting priority:
+            // 1. is_hidden = true (paling bawah)
+            // 2. Status "Diproses" (di bawah yang Selesai, tapi di atas yang hidden)
+            // 3. Status "Selesai" (paling atas untuk yang tidak hidden)
+            
+            if ($p->is_hidden) {
+                return 3; // Paling bawah
+            } elseif (strcasecmp($statusKeterangan, 'Diproses') === 0) {
+                return 2; // Di tengah (tidak hidden tapi belum selesai)
+            } else {
+                return 1; // Paling atas (Selesai dan tidak hidden)
+            }
+        })
+        ->values(); // Reset keys setelah sort
+
+        // Paginate manual
+        $perPage = 15;
+        $currentPage = request()->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        
+        $paginatedPesanan = new \Illuminate\Pagination\LengthAwarePaginator(
+            $pesanan->slice($offset, $perPage),
+            $pesanan->count(),
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
         $services = Service::orderBy('nama_service')->get();
         $metodes  = MetodePembayaran::orderBy('id')->get();
@@ -32,7 +65,8 @@ class PesananLaundryController extends Controller
             ->limit(500)
             ->get();
 
-        return view('admin.pesanan.index', compact('pesanan', 'services', 'metodes', 'pelangganOptions'));
+        return view('admin.pesanan.index', compact('paginatedPesanan', 'services', 'metodes', 'pelangganOptions'))
+            ->with('pesanan', $paginatedPesanan);
     }
 
     public function store(Request $r)
