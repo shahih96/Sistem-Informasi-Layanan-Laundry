@@ -189,7 +189,7 @@
                                     Qxpress Laundry
                                 </h3>
                                 <p class="mt-3 text-gray-700 text-center md:text-left">
-                                    Kami berkomitmen menghadirkan pengalaman laundry yang Optimal: harga jelas, proses
+                                    Kami berkomitmen memberikan pengalaman laundry yang terbaik: harga jelas, proses
                                     rapi, dan hasil memuaskan.
                                 </p>
 
