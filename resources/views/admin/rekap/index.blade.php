@@ -204,15 +204,15 @@
         <div class="mt-8 bg-white p-5 rounded-xl shadow">
             <div class="font-semibold mb-3">Tabel Omset Hari Ini</div>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table class="min-w-full text-sm table-fixed">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-3 py-2">No</th>
-                            <th class="px-3 py-2 text-left">Nama Layanan</th>
-                            <th class="px-3 py-2 text-center">Metode</th>
-                            <th class="px-3 py-2 text-center">Kuantitas</th>
-                            <th class="px-3 py-2 text-center">Total</th>
-                            <th class="px-3 py-2 text-center no-export">Aksi</th>
+                            <th class="px-3 py-2 w-16">No</th>
+                            <th class="px-3 py-2 text-left w-24">Nama Layanan</th>
+                            <th class="px-3 py-2 text-center w-24">Metode</th>
+                            <th class="px-3 py-2 text-center w-24">Kuantitas</th>
+                            <th class="px-3 py-2 text-center w-24">Total</th>
+                            <th class="px-3 py-2 text-center w-32 no-export">Aksi</th>
                         </tr>
                     </thead>
                     <tbody
@@ -310,14 +310,14 @@
         <div class="mt-8 bg-white p-5 rounded-xl shadow">
             <div class="font-semibold mb-3">Tabel Pengeluaran Hari Ini</div>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table class="min-w-full text-sm table-fixed">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-3 py-2">No</th>
-                            <th class="px-3 py-2 text-left">Nama</th>
-                            <th class="px-3 py-2 text-center">Metode</th>
-                            <th class="px-3 py-2 text-center">Harga</th>
-                            <th class="px-3 py-2 text-center no-export">Aksi</th>
+                            <th class="px-3 py-2 w-8">No</th>
+                            <th class="px-3 py-2 text-left w-16">Nama</th>
+                            <th class="px-3 py-2 text-center w-16">Metode</th>
+                            <th class="px-3 py-2 text-center w-16">Harga</th>
+                            <th class="px-3 py-2 text-center w-16 no-export">Aksi</th>
                         </tr>
                     </thead>
                     <tbody
