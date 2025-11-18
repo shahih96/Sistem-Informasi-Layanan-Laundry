@@ -81,10 +81,10 @@
         <div class="font-bold text-lg text-gray-800">Omzet Bulan {{ $monthLabel }}</div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         {{-- Prev --}}
         <a href="{{ route('dashboard', array_filter(['m'=>$prevMonthValue,'show_exp'=>request('show_exp')?1:null])) }}"
-           class="p-2 rounded-lg border-2 border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
+           class="p-2 rounded-lg border-2 border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 flex-shrink-0"
            title="Bulan sebelumnya">
           <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -92,21 +92,21 @@
         </a>
 
         {{-- Chip label bulan --}}
-        <span class="px-4 py-2 rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 font-bold text-sm shadow-sm">
+        <span class="px-4 py-2 rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 font-bold text-sm shadow-sm flex-shrink-0">
           {{ $monthLabel }}
         </span>
 
         {{-- Next (hanya jika <= bulan sekarang) --}}
         @if($canNext)
           <a href="{{ route('dashboard', array_filter(['m'=>$nextMonthValue,'show_exp'=>request('show_exp')?1:null])) }}"
-             class="p-2 rounded-lg border-2 border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
+             class="p-2 rounded-lg border-2 border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 flex-shrink-0"
              title="Bulan berikutnya">
             <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
           </a>
         @else
-          <button class="p-2 rounded-lg border-2 border-gray-200 opacity-40 cursor-not-allowed" title="Sudah bulan terbaru">
+          <button class="p-2 rounded-lg border-2 border-gray-200 opacity-40 cursor-not-allowed flex-shrink-0" title="Sudah bulan terbaru">
             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
@@ -114,9 +114,9 @@
         @endif
 
         {{-- Dropdown "lompat ke bulan" --}}
-        <form method="GET" action="{{ route('dashboard') }}" class="flex items-center gap-2">
+        <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <select name="m"
-                  class="border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none pr-8 bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm font-medium"
+                  class="border-2 border-gray-300 rounded-lg px-3 py-2 appearance-none pr-8 bg-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm font-medium w-full sm:w-auto"
                   style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat;">
             @foreach($monthOptions as $opt)
               <option value="{{ $opt['value'] }}" {{ $opt['value'] === $selectedMonthValue ? 'selected' : '' }}>
@@ -125,7 +125,7 @@
             @endforeach
           </select>
           @if(request('show_exp')) <input type="hidden" name="show_exp" value="1">@endif
-          <button class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+          <button class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 whitespace-nowrap w-full sm:w-auto">
             Terapkan
           </button>
         </form>
