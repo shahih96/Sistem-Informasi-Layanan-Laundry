@@ -77,7 +77,7 @@
                             onerror="this.style.display='none'">
                     </div>
                     <h3 class="font-semibold mt-4">Nikmati Waktu Luang Anda</h3>
-                    <p class="text-sm text-gray-600 mt-2">Kami siap jemput sesuai preferensimu.</p>
+                    <p class="text-sm text-gray-600 mt-2">Kami siap jemput sesuai keinginan Anda.</p>
                 </div>
                 <!-- Kartu 3 -->
                 <div class="text-center">
@@ -104,7 +104,7 @@
                     </div>
                     <h3 class="mt-4 font-semibold text-lg">Self Service</h3>
                     <p class="text-sm text-gray-600 mt-1">Cuci pakaian sendiri dengan mesin modern.</p>
-                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.10,000</p>
+                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp10.000</p>
                 </div>
 
                 <!-- Cuci Lipat -->
@@ -115,7 +115,7 @@
                     </div>
                     <h3 class="mt-4 font-semibold text-lg">Cuci Lipat</h3>
                     <p class="text-sm text-gray-600 mt-1">Dicuci bersih dan dilipat rapi.</p>
-                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.4,000/Kg</p>
+                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp4.000/Kg</p>
                 </div>
 
                 <!-- Cuci Setrika -->
@@ -126,7 +126,7 @@
                     </div>
                     <h3 class="mt-4 font-semibold text-lg">Cuci Setrika</h3>
                     <p class="text-sm text-gray-600 mt-1">Bersih, wangi, dan bebas kusut.</p>
-                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.6,000/Kg</p>
+                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp6.000/Kg</p>
                 </div>
 
                 <!-- Antar Jemput -->
@@ -137,7 +137,7 @@
                     </div>
                     <h3 class="mt-4 font-semibold text-lg">Antar Jemput</h3>
                     <p class="text-sm text-gray-600 mt-1">Jemput & antar cucian ke rumah.</p>
-                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp.5,000</p>
+                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp5.000</p>
                 </div>
             </div>
 
@@ -166,7 +166,7 @@
                         <h2 class="text-2xl md:text-3xl font-bold text-center tracking-tight text-gray-900">Tentang
                             Kami</h2>
                         <p class="mt-2 text-center text-gray-600 max-w-2xl mx-auto">
-                            Laundry cepat, bersih, dan wangi dengan layanan ramah—siap jemput dan antar ke rumah Anda.
+                            Laundry cepat, bersih, dan wangi dengan layanan ramah. Siap jemput dan antar ke rumah Anda.
                         </p>
 
                         <div class="mt-10 grid md:grid-cols-2 gap-10 items-center">
@@ -189,7 +189,7 @@
                                     Qxpress Laundry
                                 </h3>
                                 <p class="mt-3 text-gray-700 text-center md:text-left">
-                                    Kami berkomitmen menghadirkan pengalaman laundry yang mulus: harga jelas, proses
+                                    Kami berkomitmen menghadirkan pengalaman laundry yang Optimal: harga jelas, proses
                                     rapi, dan hasil memuaskan.
                                 </p>
 
@@ -203,8 +203,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M5 13l4 4L19 7" />
                                             </svg>
-                                            <span class="text-sm md:text-base text-gray-800">Layanan antar
-                                                jemput</span>
+                                            <span class="text-sm md:text-base text-gray-800">Cuci kering mandiri (self-service)</span>
                                         </div>
                                         <div class="flex items-center gap-3 p-1.5">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600"
@@ -221,7 +220,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M5 13l4 4L19 7" />
                                             </svg>
-                                            <span class="text-sm md:text-base text-gray-800">Cuci setrika bersih &
+                                            <span class="text-sm md:text-base text-gray-800">Cuci lipat/setrika bersih &
                                                 wangi</span>
                                         </div>
                                         <div class="flex items-center gap-3 p-1.5">
@@ -230,36 +229,36 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M5 13l4 4L19 7" />
                                             </svg>
-                                            <span class="text-sm md:text-base text-gray-800">Harga terjangkau</span>
+                                            <span class="text-sm md:text-base text-gray-800">Layanan antar-jemput</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Info Kontak -->
-                                <div class="mt-6 space-y-2 text-gray-800 text-sm md:text-base">
-                                    <div class="flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#084cac]"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <div class="mt-6 space-y-3 text-gray-800 text-sm md:text-base">
+                                    <div class="flex items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#084cac] flex-shrink-0"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         <span><strong>Buka:</strong> 06.00 – 22.00 WIB (Setiap hari)</span>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#084cac]"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M2.25 6.75A2.25 2.25 0 014.5 4.5h1.8a1.5 1.5 0 011.41 1.02l.7 2.1a1.5 1.5 0 01-.36 1.53L7 10.8a12.5 12.5 0 006.2 6.2l1.65-1.05a1.5 1.5 0 011.53-.36l2.1.7A1.5 1.5 0 0120 18.7v1.8a2.25 2.25 0 01-2.25 2.25c-8.1 0-14.25-6.15-14.25-14.25z" />
+                                    <div class="flex items-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#084cac] flex-shrink-0"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                         </svg>
                                         <span><strong>0813-7382-0217</strong></span>
                                     </div>
-                                    <div class="flex items-start gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#084cac]"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 21s-7.5-4.5-7.5-10.5a7.5 7.5 0 1115 0C19.5 16.5 12 21 12 21z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <div class="flex items-start gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#084cac] flex-shrink-0 mt-0.5"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                         <span><strong>Jl. Airan Raya No.139</strong>, Way Hui, Jati Agung, Lampung
                                             Selatan</span>

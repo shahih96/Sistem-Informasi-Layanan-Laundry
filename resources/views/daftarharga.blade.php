@@ -23,7 +23,7 @@
     <section class="max-w-7xl mx-auto px-4 py-10 md:py-14">
       <div class="text-center">
         <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900">Daftar Harga</h1>
-        <p class="mt-2 text-sm md:text-base text-gray-600">Harga transparan, layanan fleksibel—pilih sesuai kebutuhanmu.</p>
+        <p class="mt-2 text-sm md:text-base text-gray-600">Harga transparan, layanan fleksibel, pilih sesuai kebutuhan Anda.</p>
       </div>
 
       <!-- Grid kategori -->
