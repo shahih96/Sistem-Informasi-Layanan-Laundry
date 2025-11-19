@@ -24,23 +24,38 @@ class PesananLaundryController extends Controller
             'statuses' => fn($q) => $q->latest(),
         ])
         ->get()
-        ->sortBy(function($p) {
+        ->sort(function($a, $b) {
             // Ambil status terakhir
-            $lastStatus = $p->statuses->first();
-            $statusKeterangan = optional($lastStatus)->keterangan ?? 'Diproses';
+            $statusA = optional($a->statuses->first())->keterangan ?? 'Diproses';
+            $statusB = optional($b->statuses->first())->keterangan ?? 'Diproses';
             
-            // Sorting priority:
-            // Prioritas 1 (Paling Atas): Status "Diproses" dan tidak disembunyikan
-            // Prioritas 2 (Tengah): Status "Selesai" dan tidak disembunyikan
-            // Prioritas 3 (Paling Bawah): Pesanan yang sudah disembunyikan (is_hidden = true)
+            // Tentukan prioritas untuk setiap pesanan
+            // Prioritas 1 (Paling Atas): Diproses & tidak hidden
+            // Prioritas 2: Selesai & tidak hidden
+            // Prioritas 3: Diproses & hidden
+            // Prioritas 4 (Paling Bawah): Selesai & hidden
             
-            if ($p->is_hidden) {
-                return 3; // Paling bawah - yang sudah disembunyikan
-            } elseif (strcasecmp($statusKeterangan, 'Diproses') === 0) {
-                return 1; // Paling atas - Diproses yang tidak hidden
-            } else {
-                return 2; // Tengah - Selesai yang tidak hidden
+            $getPriority = function($p, $status) {
+                if (!$p->is_hidden) {
+                    return (strcasecmp($status, 'Diproses') === 0) ? 1 : 2;
+                } else {
+                    return (strcasecmp($status, 'Diproses') === 0) ? 3 : 4;
+                }
+            };
+            
+            $priorityA = $getPriority($a, $statusA);
+            $priorityB = $getPriority($b, $statusB);
+            
+            // Jika prioritas berbeda, urutkan berdasarkan prioritas
+            if ($priorityA !== $priorityB) {
+                return $priorityA - $priorityB;
             }
+            
+            // Jika prioritas sama, urutkan berdasarkan tanggal update terakhir (terbaru ke terlama)
+            $dateA = optional($a->statuses->first())->created_at ?? $a->created_at;
+            $dateB = optional($b->statuses->first())->created_at ?? $b->created_at;
+            
+            return $dateB <=> $dateA; // Descending (terbaru dulu)
         })
         ->values(); // Reset keys setelah sort
 
