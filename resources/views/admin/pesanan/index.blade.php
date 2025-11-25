@@ -123,9 +123,12 @@
             @csrf
             <!-- Nama Pelanggan -->
             <div class="relative">
-                <label class="text-sm">Nama Pelanggan</label>
+                <label class="text-sm">Nama Pelanggan <span class="text-red-500">*</span></label>
                 <input name="nama_pel" x-model="nama" @input="onNamaInput()" @blur="hideSoon('nama')"
-                       @focus="showList('nama')" autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
+                       @focus="showList('nama')" autocomplete="off" class="mt-1 w-full border rounded px-3 py-2 @error('nama_pel') border-red-500 @enderror" required>
+                @error('nama_pel')
+                    <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                @enderror
                 <div x-show="openNama && namaSaran.length"
                      class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded shadow" @mousedown.prevent>
                     <template x-for="s in namaSaran" :key="s.key">
@@ -140,9 +143,12 @@
 
             <!-- Nomor HP -->
             <div class="relative">
-                <label class="text-sm">No. HP</label>
+                <label class="text-sm">No. HP <span class="text-red-500">*</span></label>
                 <input name="no_hp_pel" x-model="hp"
-                       autocomplete="off" class="mt-1 w-full border rounded px-3 py-2" required>
+                       autocomplete="off" class="mt-1 w-full border rounded px-3 py-2 @error('no_hp_pel') border-red-500 @enderror" required>
+                @error('no_hp_pel')
+                    <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                @enderror
             </div>
 
             <!-- Pilih Layanan -->

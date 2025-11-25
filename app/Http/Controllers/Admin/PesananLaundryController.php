@@ -88,11 +88,16 @@ class PesananLaundryController extends Controller
     {
         $data = $r->validate([
             'nama_pel'             => 'required|string|max:100',
-            'no_hp_pel'            => 'required|string|max:20',
+            'no_hp_pel'            => ['required', 'string', 'max:20', 'regex:/^[\d\s\+\-\(\)]+$/', 'regex:/\d/'],
             'service_id'           => 'required|exists:services,id',
             'qty'                  => 'required|integer|min:1',
             'metode_pembayaran_id' => 'required|exists:metode_pembayaran,id',
             'status_awal'          => 'required|string|max:50',
+        ], [
+            'no_hp_pel.required' => 'Nomor HP wajib diisi',
+            'no_hp_pel.string'   => 'Nomor HP harus berupa teks',
+            'no_hp_pel.max'      => 'Nomor HP maksimal 20 karakter',
+            'no_hp_pel.regex'    => 'Nomor HP harus mengandung angka yang valid',
         ]);
 
         DB::transaction(function () use ($data) {
