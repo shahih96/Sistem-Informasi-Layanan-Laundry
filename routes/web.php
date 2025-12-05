@@ -25,7 +25,7 @@ Route::get('/services', [LandingController::class, 'services'])->name('services'
 Route::get('/tracking', [LandingController::class, 'tracking'])->name('tracking');
 
 // --------------------
-// Auth (user) dashboard – kalau memang mau pakai dashboard admin juga, pakai controller admin
+// Auth (user) dashboard
 // --------------------
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -70,6 +70,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // hapus baris/grup
     Route::delete('rekap/{rekap}', [RekapController::class, 'destroy'])->name('rekap.destroy');
     Route::delete('rekap-group', [RekapController::class, 'destroyGroup'])->name('rekap.destroy-group');
+
+    // API untuk modal omset
+    Route::get('rekap/detail', [RekapController::class, 'getOmsetDetail'])->name('rekap.detail');
+    Route::delete('rekap/delete-omset/{id}', [RekapController::class, 'deleteOmset'])->name('rekap.delete-omset');
 
     // UPDATE METODE BON -> TUNAI/QRIS
     Route::patch('rekap/bon/{pesanan}', [RekapController::class, 'updateBonMetode'])

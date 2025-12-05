@@ -284,17 +284,24 @@
                                     <td class="px-3 py-2 text-center font-bold">{{ $r->qty }}</td>
                                     <td class="px-3 py-2 text-center font-bold">Rp {{ number_format($r->total, 0, ',', '.') }}</td>
                                     <td class="px-3 py-2 text-center no-export">
+                                        {{-- Tombol Edit dengan modal - hanya aktif untuk hari ini dan H-1 --}}
                                         @php
-                                            $isBonTransaction = optional($r->metode)->nama && strtolower($r->metode->nama) === 'bon';
-                                            $canDelete = $isEditable && !($isYesterday && $isBonTransaction);
+                                            $tanggalData = request('d', optional($day ?? now())->toDateString());
+                                            $dataDate = \Carbon\Carbon::parse($tanggalData);
+                                            $today = \Carbon\Carbon::today();
+                                            $daysDiff = $today->diffInDays($dataDate, false); // false = bisa negatif
+                                            
+                                            // Aktif jika: hari ini (0) atau kemarin (-1)
+                                            // Disabled jika: lebih dari 2 hari yang lalu (< -1)
+                                            $isEditable = $daysDiff >= -1;
                                         @endphp
                                         
-                                        {{-- Tombol hapus selalu tampil tapi disabled (diblokir) --}}
                                         <button type="button" 
-                                            class="px-3 py-1 text-xs rounded bg-gray-400 text-white cursor-not-allowed opacity-60" 
-                                            disabled
-                                            title="Tombol hapus dinonaktifkan sementara">
-                                            Hapus
+                                            onclick="openOmsetModal({{ $r->service_id }}, {{ $r->metode_pembayaran_id }}, '{{ $tanggalData }}')"
+                                            class="px-3 py-1 text-xs rounded {{ $isEditable ? 'bg-blue-600 text-white hover:brightness-110' : 'bg-gray-300 text-gray-500 cursor-not-allowed' }}" 
+                                            title="{{ $isEditable ? 'Lihat detail dan hapus' : 'Hanya bisa edit data hari ini dan kemarin' }}"
+                                            {{ $isEditable ? '' : 'disabled' }}>
+                                            Edit
                                         </button>
                                     </td>
                                 </tr>
@@ -698,6 +705,196 @@
                     }
                 });
             })();
+        </script>
+
+        <!-- Modal Detail Omset -->
+        <div id="omsetModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="closeOmsetModal()">
+            <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <!-- Header -->
+                <div class="sticky top-0 bg-[#084cac] text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+                    <h3 class="text-xl font-bold">Detail Omset</h3>
+                    <button onclick="closeOmsetModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Nama Layanan</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Metode</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Kuantitas</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-gray-700">Total</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Pelanggan</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Waktu Input</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="omsetModalBody" class="divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <svg class="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Memuat data...
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Script untuk Modal Omset -->
+        <script>
+            function openOmsetModal(serviceId, metodeId, tanggal) {
+                const modal = document.getElementById('omsetModal');
+                const modalBody = document.getElementById('omsetModalBody');
+                
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                
+                // Loading state
+                modalBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <div class="flex items-center justify-center gap-2">
+                                <svg class="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Memuat data...
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                
+                // Fetch data
+                fetch(`/admin/rekap/detail?service_id=${serviceId}&metode_id=${metodeId}&tanggal=${tanggal}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data); // Debug log
+                        
+                        if (data.success && data.data && data.data.length > 0) {
+                            modalBody.innerHTML = '';
+                            data.data.forEach(r => {
+                                const row = document.createElement('tr');
+                                row.className = 'hover:bg-gray-50 border-b';
+                                row.innerHTML = `
+                                    <td class="px-4 py-3">${r.service_name || '-'}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="inline-flex px-2 py-1 rounded text-xs font-semibold ${getMetodeBadge(r.metode)}">
+                                            ${r.metode || '-'}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center font-semibold">${r.qty}</td>
+                                    <td class="px-4 py-3 text-right font-semibold">Rp ${formatRupiah(r.total)}</td>
+                                    <td class="px-4 py-3">
+                                        ${r.pelanggan_name || '-'}
+                                        ${r.pelanggan_hp ? `<div class="text-xs text-gray-500">${r.pelanggan_hp}</div>` : ''}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-xs">
+                                        <div>${r.tanggal}</div>
+                                        <div class="text-gray-500">${r.jam}</div>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button onclick="deleteOmset(${r.id}, ${r.pesanan_laundry_id || 'null'})" 
+                                            class="px-3 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700 transition-colors">
+                                            Hapus
+                                        </button>
+                                    </td>
+                                `;
+                                modalBody.appendChild(row);
+                            });
+                        } else {
+                            modalBody.innerHTML = `
+                                <tr>
+                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                        ${data.message || 'Tidak ada data'}
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        modalBody.innerHTML = `
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center">
+                                    <div class="text-red-600 font-semibold mb-2">Terjadi kesalahan saat memuat data</div>
+                                    <div class="text-sm text-gray-600">${error.message || error}</div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+            }
+
+            function closeOmsetModal() {
+                const modal = document.getElementById('omsetModal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            function deleteOmset(rekapId, pesananLaundryId) {
+                if (!confirm('Apakah Anda yakin ingin menghapus data ini?\n\nData rekap akan dihapus' + (pesananLaundryId ? ' beserta data pesanan laundry terkait.' : '.'))) {
+                    return;
+                }
+
+                fetch(`/admin/rekap/delete-omset/${rekapId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Data berhasil dihapus');
+                        closeOmsetModal();
+                        window.location.reload();
+                    } else {
+                        alert(data.message || 'Gagal menghapus data');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat menghapus data');
+                });
+            }
+
+            function formatRupiah(angka) {
+                return new Intl.NumberFormat('id-ID').format(angka);
+            }
+
+            function getMetodeBadge(metode) {
+                const m = (metode || '').toLowerCase();
+                if (m === 'tunai') return 'bg-green-100 text-green-700 border border-green-300';
+                if (m === 'qris') return 'bg-blue-100 text-blue-700 border border-blue-300';
+                if (m === 'bon') return 'bg-yellow-100 text-yellow-700 border border-yellow-300';
+                return 'bg-gray-100 text-gray-700 border border-gray-300';
+            }
+
+            // Close modal with ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeOmsetModal();
+                }
+            });
         </script>
 
     @endsection

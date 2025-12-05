@@ -1143,4 +1143,136 @@ class RekapController extends Controller
 
         return back()->with('ok_opening', 'Opening dikunci. Blok input disembunyikan.');
     }
+
+    /**
+     * Get detail omset untuk modal
+     */
+    public function getOmsetDetail(Request $request)
+    {
+        try {
+            $serviceId = $request->query('service_id');
+            $metodeId = $request->query('metode_id');
+            $tanggal = $request->query('tanggal', today()->toDateString());
+
+            Log::info('[getOmsetDetail] Request params', [
+                'service_id' => $serviceId,
+                'metode_id' => $metodeId,
+                'tanggal' => $tanggal
+            ]);
+
+            if (!$serviceId || !$metodeId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Parameter service_id dan metode_id harus diisi',
+                    'data' => []
+                ], 400);
+            }
+
+            $day = Carbon::parse($tanggal);
+            $start = $day->copy()->startOfDay();
+            $end = $day->copy()->endOfDay();
+
+            $rekaps = Rekap::with(['service', 'metode'])
+                ->where('service_id', $serviceId)
+                ->where('metode_pembayaran_id', $metodeId)
+                ->whereBetween('created_at', [$start, $end])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            Log::info('[getOmsetDetail] Found records', ['count' => $rekaps->count()]);
+
+            if ($rekaps->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data tidak ditemukan',
+                    'data' => []
+                ]);
+            }
+
+            $data = $rekaps->map(function($rekap) {
+                $pelangganName = '-';
+                $pelangganHp = null;
+
+                // Cek apakah ada pesanan_laundry_id
+                if ($rekap->pesanan_laundry_id) {
+                    $pesanan = PesananLaundry::find($rekap->pesanan_laundry_id);
+                    if ($pesanan) {
+                        $pelangganName = $pesanan->nama_pel;
+                        $pelangganHp = $pesanan->no_hp_pel;
+                    }
+                }
+
+                return [
+                    'id' => $rekap->id,
+                    'service_name' => $rekap->service->nama_service ?? '-',
+                    'metode' => $rekap->metode->nama ?? '-',
+                    'qty' => $rekap->qty,
+                    'total' => $rekap->total,
+                    'pelanggan_name' => $pelangganName,
+                    'pelanggan_hp' => $pelangganHp,
+                    'tanggal' => $rekap->created_at->format('d/m/Y'),
+                    'jam' => $rekap->created_at->format('H:i:s'),
+                    'pesanan_laundry_id' => $rekap->pesanan_laundry_id,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[getOmsetDetail] Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete omset dan cascade ke pesanan_laundry jika ada
+     */
+    public function deleteOmset($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $rekap = Rekap::findOrFail($id);
+            $pesananLaundryId = $rekap->pesanan_laundry_id;
+
+            // Hapus rekap
+            $rekap->delete();
+
+            // Jika ada foreign key ke pesanan_laundry, hapus juga pesanannya
+            if ($pesananLaundryId) {
+                $pesanan = PesananLaundry::find($pesananLaundryId);
+                if ($pesanan) {
+                    // Hapus semua status pesanan terkait
+                    $pesanan->statuses()->delete();
+                    // Hapus pesanan
+                    $pesanan->delete();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => $pesananLaundryId 
+                    ? 'Data rekap dan pesanan laundry berhasil dihapus'
+                    : 'Data rekap berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('[deleteOmset] Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
