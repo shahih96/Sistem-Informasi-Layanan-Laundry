@@ -3,17 +3,6 @@
 
 @section('content')
 
-{{-- Banner informasi kunci --}}
-<div class="mb-4 p-4 rounded-lg border border-blue-300 bg-blue-50 text-blue-800 text-sm font-medium flex items-start gap-3">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-  </svg>
-  <div>
-    <div class="font-bold text-base mb-1">🔒 Halaman Dikunci</div>
-    <p>Layanan dan harga saat ini dalam mode <strong>read-only</strong>. Tambah, edit, dan hapus layanan dinonaktifkan untuk mencegah perubahan yang tidak disengaja.</p>
-  </div>
-</div>
-
 {{-- Flash messages --}}
 @if(session('success'))
   <div class="mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">{{ session('success') }}</div>
@@ -31,30 +20,30 @@
   </div>
 @endif
 
-<div class="bg-white p-5 rounded-xl shadow opacity-60">
+<div class="bg-white p-5 rounded-xl shadow">
   <div class="text-xl font-bold mb-4">Tambah Layanan</div>
 
   <form method="POST" action="{{ route('admin.services.store') }}" class="grid md:grid-cols-3 gap-4 service-create-form">
     @csrf
-    <input name="nama_service" placeholder="Nama Layanan" class="border rounded px-3 py-2 bg-gray-100 cursor-not-allowed" value="{{ old('nama_service') }}" disabled>
+    <input name="nama_service" placeholder="Nama Layanan" class="border rounded px-3 py-2" value="{{ old('nama_service') }}" required>
 
     {{-- Input harga --}}
     <div class="relative">
       <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
-      <input id="harga_create_display" placeholder="Harga"
-             type="text" inputmode="numeric"
-             class="border rounded pl-8 pr-2 py-2 w-full bg-gray-100 cursor-not-allowed"
-             value="{{ old('harga_service') ? number_format((int)old('harga_service'),0,',','.') : '' }}"
+      <input name="harga_service" placeholder="Harga"
+             type="number" 
+             min="0"
+             class="border rounded pl-8 pr-2 py-2 w-full"
+             value="{{ old('harga_service') }}"
              autocomplete="off"
-             disabled>
-      <input id="harga_create_value" type="hidden" name="harga_service" value="{{ old('harga_service') }}">
+             required>
     </div>
 
-    <button type="button" class="px-5 py-2 rounded bg-gray-400 text-white cursor-not-allowed" disabled>Simpan (Dikunci)</button>
+    <button type="submit" class="px-5 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Simpan</button>
   </form>
 </div>
 
-<div class="mt-8 bg-white p-5 rounded-xl shadow opacity-60">
+<div class="mt-8 bg-white p-5 rounded-xl shadow">
   <div class="text-xl font-bold mb-4">Layanan & Daftar Harga</div>
   <div class="overflow-x-auto">
     <table class="min-w-full text-sm">
@@ -79,31 +68,30 @@
           <td class="px-3 py-2">
             <form method="POST" action="{{ route('admin.services.update',$s) }}" class="flex gap-2 items-center">
               @csrf @method('PUT')
-              <input name="nama_service" value="{{ $s->nama_service }}" class="border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" disabled>
+              <input name="nama_service" value="{{ $s->nama_service }}" class="border rounded px-2 py-1" required>
           </td>
 
           {{-- Input harga dengan prefix Rp --}}
           <td class="px-3 py-2">
             <div class="relative">
               <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 select-none">Rp</span>
-              <input name="harga_display" type="text" inputmode="numeric"
-                     class="text-right border rounded pl-7 pr-2 py-1 w-32 bg-gray-100 cursor-not-allowed"
-                     value="{{ number_format((int)$s->harga_service,0,',','.') }}"
+              <input name="harga_service" type="number" min="0"
+                     class="text-right border rounded pl-7 pr-2 py-1 w-32"
+                     value="{{ (int)$s->harga_service }}"
                      autocomplete="off"
-                     disabled>
-              <input type="hidden" name="harga_service" value="{{ (int)$s->harga_service }}">
+                     required>
             </div>
           </td>
 
           <td class="px-3 py-2">{{ $s->updated_at->format('d M Y') }}</td>
 
           <td class="px-3 py-2 text-right">
-              <button type="button" class="px-3 py-1 text-xs rounded bg-gray-400 text-white cursor-not-allowed" disabled>update</button>
+              <button type="submit" class="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">update</button>
             </form>
 
-            <form method="POST" action="{{ route('admin.services.destroy',$s) }}" class="inline" onsubmit="return false;">
+            <form method="POST" action="{{ route('admin.services.destroy',$s) }}" class="inline" onsubmit="return confirm('Yakin ingin menghapus layanan ini?')">
               @csrf @method('DELETE')
-              <button type="button" class="px-3 py-1 text-xs rounded bg-gray-400 text-white cursor-not-allowed" disabled>hapus</button>
+              <button type="submit" class="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700">hapus</button>
             </form>
           </td>
         </tr>
