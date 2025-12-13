@@ -20,5 +20,16 @@ class AdminUserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // Admin demo untuk penguji
+        User::updateOrCreate(
+            ['email' => 'demo@laundry.com'],
+            [
+                'name'      => 'Demo Penguji',
+                'password'  => Hash::make('demo123'),
+                'is_admin'  => true,
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }
