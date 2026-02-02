@@ -515,8 +515,8 @@
                                         }
                                         
                                         // Pesan notifikasi selesai
-                                        $waNotifSelesai = "Halo kak " . $p->nama_pel . " 👋\n\n";
-                                        $waNotifSelesai .= "🎉 *CUCIAN ANDA SUDAH SELESAI!* 🎉\n\n";
+                                        $waNotifSelesai = "Halo kak " . $p->nama_pel . "\n\n";
+                                        $waNotifSelesai .= "*CUCIAN ANDA SUDAH SELESAI!*\n\n";
                                         $waNotifSelesai .= "Berikut rincian pesanan Anda:\n\n";
                                         
                                         // Layanan utama
@@ -535,7 +535,7 @@
                                         
                                         $waNotifSelesai .= "\n*Total: Rp " . number_format($total, 0, ',', '.') . "*\n\n";
                                         $waNotifSelesai .= "Cucian Anda sudah bisa diambil di Qxpress Laundry. ";
-                                        $waNotifSelesai .= "Kami tunggu kedatangan kakak ya! 😊\n\n";
+                                        $waNotifSelesai .= "Kami tunggu kedatangan kakak ya😊\n\n";
                                         $waNotifSelesai .= "Terima kasih sudah menggunakan layanan kami. 🙏\n\n";
                                         $waNotifSelesai .= "Cek status laundry: qxpresslaundry.com/tracking";
                                         
