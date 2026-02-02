@@ -50,7 +50,7 @@ class RekapController extends Controller
                 DB::raw('SUM(total)      AS total'),
                 DB::raw('MAX(created_at) AS max_created_at'),
             ])
-            ->with(['service:id,nama_service,is_fee_service', 'metode:id,nama'])
+            ->with(['service:id,nama_service,is_fee_service,expected_tap', 'metode:id,nama'])
             ->groupBy('service_id', 'metode_pembayaran_id')
             ->orderByDesc('max_created_at')
             ->paginate(20, ['*'], 'omset');
@@ -351,7 +351,7 @@ class RekapController extends Controller
             ->latest()->paginate(10, ['*'], 'lunas');
 
         // === TABEL BON PELANGGAN ===
-        $bon = PesananLaundry::with(['service', 'metode'])
+        $bon = PesananLaundry::with(['service', 'antarJemputService', 'metode'])
             ->where('created_at', '<=', $end)
             ->where(function ($q) use ($idBon, $idTunai, $idQris, $start, $end) {
 
@@ -417,6 +417,26 @@ class RekapController extends Controller
             }
         }
         $totalTapHariIni = max(0, $totalTapHariIni);
+
+        // ===================== EXPECTED TAP (HARI INI) =====================
+        // Hitung expected tap berdasarkan omset hari ini
+        $expectedTapHariIni = 0;
+        $omsetRawData = Rekap::query()
+            ->whereNotNull('service_id')
+            ->whereBetween('created_at', [$start, $end])
+            ->select([
+                'service_id',
+                DB::raw('SUM(qty) AS total_qty'),
+            ])
+            ->with(['service:id,nama_service,expected_tap'])
+            ->groupBy('service_id')
+            ->get();
+        
+        foreach ($omsetRawData as $row) {
+            $qty = (int) ($row->total_qty ?? 0);
+            $expectedTapPerUnit = (int) ($row->service->expected_tap ?? 0);
+            $expectedTapHariIni += $qty * $expectedTapPerUnit;
+        }
 
         $adaSaldoKemarin = \App\Models\SaldoKartu::where('created_at', '<', $start)->exists();
 
@@ -709,6 +729,7 @@ class RekapController extends Controller
             'totalTunaiHariIni',
             'totalQrisHariIni',
             'totalTapHariIni',
+            'expectedTapHariIni',
             'tapGagalHariIni',
             'day',
             'isToday',
@@ -881,6 +902,15 @@ class RekapController extends Controller
     public function destroy(Rekap $rekap, Request $r)
     {
         $this->assertEditableOrFail($r);
+        
+        // Jika rekap ini terkait dengan pesanan_laundry_id, hapus semua rekap terkait
+        // (layanan utama + antar jemput jika ada)
+        if ($rekap->pesanan_laundry_id) {
+            $deleted = Rekap::where('pesanan_laundry_id', $rekap->pesanan_laundry_id)->delete();
+            return back()->with('ok', "Rekap pesanan berhasil dihapus ($deleted baris).");
+        }
+        
+        // Jika bukan dari pesanan (manual entry), hapus hanya 1 baris
         $rekap->delete();
         return back()->with('ok', 'Baris rekap berhasil dihapus.');
     }
@@ -1011,23 +1041,59 @@ class RekapController extends Controller
         $oldId   = $pesanan->metode_pembayaran_id;
 
         DB::transaction(function () use ($pesanan, $newId, $oldId, $idBon, $idTunai, $idQris) {
-            $pesanan->update(['metode_pembayaran_id' => $newId]);
-
-            if ($oldId === $idBon && in_array($newId, [$idTunai, $idQris], true)) {
-                if (is_null($pesanan->paid_at)) {
-                    $pesanan->update(['paid_at' => now()]);
-                }
-            }
-
-            if (in_array($oldId, [$idTunai, $idQris], true) && $newId === $idBon) {
-                $pesanan->update(['paid_at' => null]);
-            }
-
-            $todayStart = now()->startOfDay();
-            $todayEnd   = now()->endOfDay();
-            if ($pesanan->created_at->between($todayStart, $todayEnd)) {
-                Rekap::where('pesanan_laundry_id', $pesanan->id)
+            // Jika pesanan memiliki group_id, update semua pesanan dalam group yang sama
+            if ($pesanan->group_id) {
+                $groupPesananIds = PesananLaundry::where('group_id', $pesanan->group_id)->pluck('id');
+                
+                // Update semua pesanan dalam group
+                PesananLaundry::whereIn('id', $groupPesananIds)
                     ->update(['metode_pembayaran_id' => $newId]);
+                
+                // Update paid_at untuk pelunasan bon -> tunai/qris
+                if ($oldId === $idBon && in_array($newId, [$idTunai, $idQris], true)) {
+                    PesananLaundry::whereIn('id', $groupPesananIds)
+                        ->whereNull('paid_at')
+                        ->update(['paid_at' => now()]);
+                }
+                
+                // Reset paid_at untuk perubahan tunai/qris -> bon
+                if (in_array($oldId, [$idTunai, $idQris], true) && $newId === $idBon) {
+                    PesananLaundry::whereIn('id', $groupPesananIds)
+                        ->update(['paid_at' => null]);
+                }
+                
+                // Update rekap untuk semua pesanan dalam group (jika dibuat hari ini)
+                $todayStart = now()->startOfDay();
+                $todayEnd   = now()->endOfDay();
+                $createdToday = PesananLaundry::whereIn('id', $groupPesananIds)
+                    ->whereBetween('created_at', [$todayStart, $todayEnd])
+                    ->exists();
+                    
+                if ($createdToday) {
+                    Rekap::whereIn('pesanan_laundry_id', $groupPesananIds)
+                        ->update(['metode_pembayaran_id' => $newId]);
+                }
+            } else {
+                // Jika tidak ada group_id, update single pesanan (backward compatibility)
+                $pesanan->update(['metode_pembayaran_id' => $newId]);
+
+                if ($oldId === $idBon && in_array($newId, [$idTunai, $idQris], true)) {
+                    if (is_null($pesanan->paid_at)) {
+                        $pesanan->update(['paid_at' => now()]);
+                    }
+                }
+
+                if (in_array($oldId, [$idTunai, $idQris], true) && $newId === $idBon) {
+                    $pesanan->update(['paid_at' => null]);
+                }
+
+                $todayStart = now()->startOfDay();
+                $todayEnd   = now()->endOfDay();
+                if ($pesanan->created_at->between($todayStart, $todayEnd)) {
+                    // Update metode untuk semua rekap entries terkait pesanan ini (main service + antar jemput)
+                    Rekap::where('pesanan_laundry_id', $pesanan->id)
+                        ->update(['metode_pembayaran_id' => $newId]);
+                }
             }
         });
 
@@ -1243,11 +1309,12 @@ class RekapController extends Controller
             $rekap = Rekap::findOrFail($id);
             $pesananLaundryId = $rekap->pesanan_laundry_id;
 
-            // Hapus rekap
-            $rekap->delete();
-
-            // Jika ada foreign key ke pesanan_laundry, hapus juga pesanannya
+            // Jika ada pesanan_laundry_id, hapus SEMUA rekap terkait (layanan utama + antar jemput)
             if ($pesananLaundryId) {
+                // Hapus semua rekap dengan pesanan_laundry_id yang sama
+                Rekap::where('pesanan_laundry_id', $pesananLaundryId)->delete();
+                
+                // Hapus pesanan laundry beserta statusnya
                 $pesanan = PesananLaundry::find($pesananLaundryId);
                 if ($pesanan) {
                     // Hapus semua status pesanan terkait
@@ -1255,6 +1322,9 @@ class RekapController extends Controller
                     // Hapus pesanan
                     $pesanan->delete();
                 }
+            } else {
+                // Jika tidak ada pesanan_laundry_id (manual entry), hapus hanya rekap ini
+                $rekap->delete();
             }
 
             DB::commit();

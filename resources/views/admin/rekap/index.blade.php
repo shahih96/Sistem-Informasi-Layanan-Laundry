@@ -189,6 +189,9 @@
                 <div class="mt-2 text-3xl font-bold">
                     {{ $totalTapHariIni === null || (int) $totalTapHariIni === 0 ? '—' : (int) $totalTapHariIni }}
                 </div>
+                <div class="text-xs text-gray-600 mt-2">
+                    Expected Tap: <span class="font-bold {{ $expectedTapHariIni > 0 && $totalTapHariIni > 0 && $totalTapHariIni >= $expectedTapHariIni ? 'text-green-600' : 'text-amber-600' }}">{{ $expectedTapHariIni }}</span>
+                </div>
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow border-l-4 border-gray-800">
@@ -413,7 +416,6 @@
                             <th class="px-3 py-2">No</th>
                             <th class="px-3 py-2 text-left">Nama Pelanggan</th>
                             <th class="px-3 py-2 text-left">Layanan</th>
-                            <th class="px-3 py-2 text-center">Kuantitas</th>
                             <th class="px-3 py-2 text-center">Total</th>
                             <th class="px-3 py-2 text-center">Metode</th>
                             <th class="px-3 py-2 text-center">Pembayaran</th>
@@ -426,14 +428,54 @@
                     [&_tr:nth-child(even)]:bg-white
                     [&_tr:hover]:bg-amber-50/40
                   ">
-                        @forelse($bon as $i => $p)
+                        @php
+                            $groupedBon = [];
+                            
+                            foreach ($bon as $p) {
+                                $groupId = $p->group_id ?? 'single-' . $p->id;
+                                
+                                if (!isset($groupedBon[$groupId])) {
+                                    $groupedBon[$groupId] = [
+                                        'main' => $p,
+                                        'additional' => []
+                                    ];
+                                } else {
+                                    $groupedBon[$groupId]['additional'][] = $p;
+                                }
+                            }
+                            
+                            $rowNumber = ($bon->currentPage() - 1) * $bon->perPage();
+                        @endphp
+                        
+                        @forelse($groupedBon as $groupId => $group)
                             @php
+                                $rowNumber++;
+                                $p = $group['main'];
+                                $additionalServices = $group['additional'];
+                                
                                 $asOfStart = ($day ?? now())->copy()->startOfDay();
                                 $asOfEnd = ($day ?? now())->copy()->endOfDay();
 
+                                // Hitung total pesanan utama
                                 $qty = max(1, (int) ($p->qty ?? 1));
                                 $harga = (int) ($p->harga_satuan ?? ($p->service->harga_service ?? 0));
-                                $total = $qty * $harga;
+                                $totalLayanan = $qty * $harga;
+                                
+                                // Hitung antar jemput jika ada
+                                $hargaAntarJemput = 0;
+                                if ($p->antar_jemput_service_id && $p->antarJemputService) {
+                                    $hargaAntarJemput = (int) ($p->antarJemputService->harga_service ?? 0);
+                                }
+                                
+                                // Hitung total dari layanan tambahan
+                                $totalAdditional = 0;
+                                foreach ($additionalServices as $addServ) {
+                                    $qtyAdd = max(1, (int) ($addServ->qty ?? 1));
+                                    $hargaAdd = (int) ($addServ->harga_satuan ?? ($addServ->service->harga_service ?? 0));
+                                    $totalAdditional += $qtyAdd * $hargaAdd;
+                                }
+                                
+                                $total = $totalLayanan + $hargaAntarJemput + $totalAdditional;
 
                                 $metodeNow = strtolower($p->metode->nama ?? 'bon');
 
@@ -445,15 +487,23 @@
                                     $metodeNow !== 'bon' && optional($p->updated_at)->between($asOfStart, $asOfEnd);
                             @endphp
                             <tr class="border-t">
-                                <td class="px-3 py-2 font-bold">{{ ($bon->currentPage() - 1) * $bon->perPage() + $loop->iteration }}
-                                </td>
+                                <td class="px-3 py-2 font-bold">{{ $rowNumber }}</td>
 
                                 <td class="px-3 py-2 font-bold">
                                     <div class="font-bold">{{ $p->nama_pel }}</div>
                                 </td>
 
-                                <td class="px-3 py-2 font-bold">{{ $p->service->nama_service ?? '-' }}</td>
-                                <td class="px-3 py-2 text-center font-bold">{{ $qty }}</td>
+                                <td class="px-3 py-2 font-bold">
+                                    <div>{{ $p->service->nama_service ?? '-' }} ({{ $qty }}x)</div>
+                                    @foreach ($additionalServices as $addServ)
+                                        <div class="mt-0.5">
+                                            {{ $addServ->service->nama_service ?? '-' }} ({{ $addServ->qty }}x)
+                                        </div>
+                                    @endforeach
+                                    @if ($p->antar_jemput_service_id && $p->antarJemputService)
+                                        <div class="text-xs text-gray-500 mt-0.5 font-normal">{{ $p->antarJemputService->nama_service }}</div>
+                                    @endif
+                                </td>
                                 <td class="px-3 py-2 text-center font-bold">Rp {{ number_format($total, 0, ',', '.') }}</td>
 
                                 {{-- Metode (dropdown) --}}

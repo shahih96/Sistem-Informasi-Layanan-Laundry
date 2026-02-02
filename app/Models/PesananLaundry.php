@@ -13,7 +13,7 @@ class PesananLaundry extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'service_id','nama_pel','no_hp_pel','admin_id','qty','metode_pembayaran_id','is_hidden','harga_satuan'
+        'group_id','service_id','antar_jemput_service_id','nama_pel','no_hp_pel','admin_id','qty','metode_pembayaran_id','is_hidden','harga_satuan'
     ];
 
     protected $casts = [
@@ -27,9 +27,11 @@ class PesananLaundry extends Model
 
     public function admin(){ return $this->belongsTo(User::class,'admin_id'); }
     public function service(){ return $this->belongsTo(Service::class); }
+    public function antarJemputService(){ return $this->belongsTo(Service::class, 'antar_jemput_service_id'); }
     public function statuses(){ return $this->hasMany(StatusPesanan::class,'pesanan_id'); }
     public function metode(){ return $this->belongsTo(MetodePembayaran::class,'metode_pembayaran_id'); }
-    public function rekap(){ return $this->hasOne(Rekap::class,'pesanan_laundry_id'); }
+    public function rekaps(){ return $this->hasMany(Rekap::class,'pesanan_laundry_id'); }
+    public function rekap(){ return $this->hasOne(Rekap::class,'pesanan_laundry_id'); } // kept for backward compatibility
     public function latestStatusLog(){return $this->hasOne(StatusPesanan::class, 'pesanan_id')->latestOfMany(); }
 
     protected static function booted()

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Service extends Model
 {
-  protected $fillable = ['nama_service', 'harga_service', 'is_fee_service'];
+  protected $fillable = ['nama_service', 'harga_service', 'is_fee_service', 'expected_tap'];
   protected $casts = [
     'is_fee_service' => 'boolean',
   ];
