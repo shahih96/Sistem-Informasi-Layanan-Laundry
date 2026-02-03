@@ -236,15 +236,15 @@ class RekapController extends Controller
             }
 
             // setrika
-            if (str_contains($name, 'cuci setrika express 3kg')) {
+            if (str_contains($name, 'cuci setrika express ≤3kg')) {
                 $feeSetrikaCum += 3000 * $qty;
                 continue;
             }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
+            if (str_contains($name, 'cuci setrika express ≤5kg')) {
                 $feeSetrikaCum += 5000 * $qty;
                 continue;
             }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
+            if (str_contains($name, 'cuci setrika express ≤7kg')) {
                 $feeSetrikaCum += 7000 * $qty;
                 continue;
             }
@@ -521,15 +521,15 @@ class RekapController extends Controller
                 continue;
             }
 
-            if (str_contains($name, 'cuci setrika express 3kg')) {
+            if (str_contains($name, 'cuci setrika express ≤3kg')) {
                 $feeSetrikaCumPrev += 3000 * $qty;
                 continue;
             }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
+            if (str_contains($name, 'cuci setrika express ≤5kg')) {
                 $feeSetrikaCumPrev += 5000 * $qty;
                 continue;
             }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
+            if (str_contains($name, 'cuci setrika express ≤7kg')) {
                 $feeSetrikaCumPrev += 7000 * $qty;
                 continue;
             }
