@@ -110,17 +110,17 @@ class RekapController extends Controller
             }
 
             // -------- SETRIKA --------
-            if (str_contains($name, 'cuci setrika express 3kg')) {
+            if (str_contains($name, 'cuci setrika express ≤3kg')) {
                 $setrikaKgTotal += 3 * $qty;
                 $feeSetrika     += 3000 * $qty;
                 continue;
             }
-            if (str_contains($name, 'cuci setrika express 5kg')) {
+            if (str_contains($name, 'cuci setrika express ≤5kg')) {
                 $setrikaKgTotal += 5 * $qty;
                 $feeSetrika     += 5000 * $qty;
                 continue;
             }
-            if (str_contains($name, 'cuci setrika express 7kg')) {
+            if (str_contains($name, 'cuci setrika express ≤7kg')) {
                 $setrikaKgTotal += 7 * $qty;
                 $feeSetrika     += 7000 * $qty;
                 continue;
