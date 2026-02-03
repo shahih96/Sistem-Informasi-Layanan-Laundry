@@ -229,14 +229,12 @@
                             // Fungsi untuk aliasing nama layanan
                             function getServiceAlias($namaService) {
                                 $aliases = [
-                                    'Cuci Self Service Max 7Kg' => 'Cuci',
-                                    'Cuci Setrika Regular (/Kg)' => 'CKS R',
-                                    'Kering Self Service Max 7Kg' => 'Kering',
-                                    'Cuci Lipat Express Max 7Kg' => 'CKL E',
-                                    'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
-                                    'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
+                                    'Cuci Self Service ≤7Kg' => 'Cuci',
+                                    'Kering Self Service ≤7Kg' => 'Kering',
+                                    'Cuci Lipat Express ≤7Kg' => 'CKL E',
+                                    'Cuci Setrika Express ≤3Kg' => 'CKS E 3Kg',
+                                    'Cuci Setrika Express ≤5Kg' => 'CKS E 5Kg',
                                     'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
-                                    'Cuci Lipat Regular (/Kg)' => 'CKL R',
                                 ];
                                 return $aliases[$namaService] ?? $namaService;
                             }
