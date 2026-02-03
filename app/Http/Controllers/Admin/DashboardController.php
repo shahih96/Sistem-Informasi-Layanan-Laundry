@@ -52,9 +52,9 @@ class DashboardController extends Controller
 
             $name = strtolower($row->service->nama_service ?? '');
 
-            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrika += 3000 * $qty; continue; }
-            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrika += 5000 * $qty; continue; }
-            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrika += 7000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤3kg')) { $feeSetrika += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤5kg')) { $feeSetrika += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤7kg')) { $feeSetrika += 7000 * $qty; continue; }
 
             if (str_contains($name, 'bed cover')) { $feeBedCover += 3000 * $qty; continue; }
             if (str_contains($name, 'hordeng'))   { $feeHordeng  += 3000 * $qty; continue; }
@@ -174,10 +174,9 @@ class DashboardController extends Controller
             if (str_contains($name, 'lipat') && str_contains($name, '/kg')) { $kgLipatTotalCum += $qty; continue; }
             if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) { $kgLipatTotalCum += 7 * $qty; continue; }
 
-            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrikaCum += 3000 * $qty; continue; }
-            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrikaCum += 5000 * $qty; continue; }
-            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrikaCum += 7000 * $qty; continue; }
-
+            if (str_contains($name, 'cuci setrika express ≤3kg')) { $feeSetrikaCum += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤5kg')) { $feeSetrikaCum += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤7kg')) { $feeSetrikaCum += 7000 * $qty; continue; }
             if (str_contains($name, 'bed cover')) { $feeBedCoverCum += 3000 * $qty; continue; }
             if (str_contains($name, 'hordeng'))   { $feeHordengCum  += 3000 * $qty; continue; }
             if (str_contains($name, 'boneka'))    { $feeBonekaCum   += 1000 * $qty; continue; }
@@ -289,9 +288,9 @@ class DashboardController extends Controller
             if (str_contains($name, 'lipat') && str_contains($name, '/kg'))              { $kgLipatMonth += $qty; continue; }
             if (str_contains($name, 'cuci lipat express') && str_contains($name, '7kg')) { $kgLipatMonth += 7 * $qty; continue; }
 
-            if (str_contains($name, 'cuci setrika express 3kg')) { $feeSetrikaMonth += 3000 * $qty; continue; }
-            if (str_contains($name, 'cuci setrika express 5kg')) { $feeSetrikaMonth += 5000 * $qty; continue; }
-            if (str_contains($name, 'cuci setrika express 7kg')) { $feeSetrikaMonth += 7000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤3kg')) { $feeSetrikaMonth += 3000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤5kg')) { $feeSetrikaMonth += 5000 * $qty; continue; }
+            if (str_contains($name, 'cuci setrika express ≤7kg')) { $feeSetrikaMonth += 7000 * $qty; continue; }
 
             if (str_contains($name, 'bed cover')) { $feeBedCoverMonth += 3000 * $qty; continue; }
             if (str_contains($name, 'hordeng'))   { $feeHordengMonth  += 3000 * $qty; continue; }
