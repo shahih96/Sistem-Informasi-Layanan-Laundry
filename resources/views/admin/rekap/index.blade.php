@@ -234,7 +234,7 @@
                                     'Cuci Lipat Express ≤7Kg' => 'CKL E',
                                     'Cuci Setrika Express ≤3Kg' => 'CKS E 3Kg',
                                     'Cuci Setrika Express ≤5Kg' => 'CKS E 5Kg',
-                                    'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
+                                    'Cuci Setrika Express ≤7Kg' => 'CKS E 7Kg',
                                 ];
                                 return $aliases[$namaService] ?? $namaService;
                             }
