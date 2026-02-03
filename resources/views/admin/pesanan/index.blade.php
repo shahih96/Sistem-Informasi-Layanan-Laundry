@@ -233,16 +233,16 @@
                                         // Fungsi untuk aliasing nama layanan
                                         function getServiceAliasPesanan($namaService) {
                                             $aliases = [
-                                                'Cuci Lipat Express ≤ 7Kg' => 'CKL E',
-                                                'Cuci Setrika Express ≤ 3Kg' => 'CKS E 3Kg',
-                                                'Cuci Setrika Express ≤ 5Kg' => 'CKS E 5Kg',
-                                                'Cuci Setrika Express ≤ 7Kg' => 'CKS E 7Kg',
+                                                'Cuci Lipat Express ≤7Kg' => 'CKL E',
+                                                'Cuci Setrika Express ≤3Kg' => 'CKS E 3Kg',
+                                                'Cuci Setrika Express ≤5Kg' => 'CKS E 5Kg',
+                                                'Cuci Setrika Express ≤7Kg' => 'CKS E 7Kg',
                                             ];
                                             return $aliases[$namaService] ?? $namaService;
                                         }
                                         
                                         // Layanan yang TIDAK boleh muncul
-                                        $excludedServices = ['Cuci Self Service ≤ 7Kg', 'Kering Self Service ≤ 7Kg', 'Antar Jemput (<=3KM)', 'Antar Jemput (>3KM)'];
+                                        $excludedServices = ['Cuci Self Service ≤7Kg', 'Kering Self Service ≤7Kg', 'Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)'];
                                         
                                         // Filter dan sort
                                         $filteredServicesPesanan = $services->filter(function($s) use ($excludedServices) {
