@@ -227,7 +227,7 @@
                         }
                         
                         // Filter hanya layanan tertentu untuk tabel omset
-                        $allowedServices = ['Cuci Self Service Max 7Kg', 'Kering Self Service Max 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (>5KM)'];
+                        $allowedServices = ['Cuci Self Service ≤7Kg', 'Kering Self Service ≤7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (>5KM)'];
                         $filteredServices = $services->filter(function($s) use ($allowedServices) {
                             return in_array($s->nama_service, $allowedServices);
                         });
