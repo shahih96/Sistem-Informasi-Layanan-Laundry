@@ -13,7 +13,8 @@ class ServiceController extends Controller
     public function index()
     {
         $services = Service::orderBy('nama_service')->paginate(20);
-        return view('admin.services.index', compact('services'));
+        $adminPassword = 'ngubahdoang'; // Password untuk proteksi edit/hapus layanan
+        return view('admin.services.index', compact('services', 'adminPassword'));
     }
 
     public function store(Request $request)
@@ -69,6 +70,9 @@ class ServiceController extends Controller
         ]);
 
         if ($harga <= 0) {
+            if (request()->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Harga tidak valid.'], 422);
+            }
             return back()->withInput()->with('error', 'Harga tidak valid.');
         }
 
@@ -76,6 +80,9 @@ class ServiceController extends Controller
             ->where('id', '!=', $service->id)
             ->exists();
         if ($exists) {
+            if (request()->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Nama layanan sudah ada, gunakan nama lain.'], 422);
+            }
             return back()->with('error', 'Nama layanan sudah ada, gunakan nama lain.');
         }
 
@@ -88,11 +95,21 @@ class ServiceController extends Controller
             ]);
 
             DB::commit();
+            
+            if (request()->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Layanan berhasil diperbarui.']);
+            }
             return back()->with('success', 'Layanan berhasil diperbarui.');
         } catch (QueryException $e) {
             DB::rollBack();
             if ($e->getCode() === '23000') {
+                if (request()->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Nama layanan sudah terdaftar.'], 422);
+                }
                 return back()->with('error', 'Nama layanan sudah terdaftar.');
+            }
+            if (request()->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Terjadi kesalahan. Silakan coba lagi.'], 422);
             }
             return back()->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
         }
@@ -101,6 +118,10 @@ class ServiceController extends Controller
     public function destroy(Service $service)
     {
         $service->delete();
+        
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Layanan berhasil dihapus.']);
+        }
         return back()->with('ok', 'Layanan dihapus.');
     }
 }

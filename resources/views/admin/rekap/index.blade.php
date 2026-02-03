@@ -171,6 +171,7 @@
                     Qris:
                     Rp {{ number_format($totalQrisHariIni, 0, ',', '.') }} • Bon: Rp
                     {{ number_format($totalBonHariIni, 0, ',', '.') }}</div>
+                <div class="text-xs text-gray-500 mt-1 font-bold">Saldo Qris hari ini: Rp {{ number_format($saldoQrHariIni, 0, ',', '.') }}</div>
             </div>
         </div>
         <div class="mt-4 grid md:grid-cols-3 gap-4 capture-desktop-3">

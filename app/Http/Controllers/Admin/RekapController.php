@@ -688,6 +688,18 @@ class RekapController extends Controller
             ->whereIn('pesanan_laundry.metode_pembayaran_id', [$idTunai, $idQris])
             ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
 
+        // Pelunasan bon dengan QRIS hari ini (untuk Saldo QR)
+        $bonLunasQrisHariIni = PesananLaundry::query()
+            ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
+            ->where('services.is_fee_service', 0)
+            ->where('pesanan_laundry.created_at', '<', $start)
+            ->whereBetween('pesanan_laundry.paid_at', [$start, $end])
+            ->where('pesanan_laundry.metode_pembayaran_id', $idQris)
+            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
+
+        // Total Saldo QR hari ini (Omset QRIS + Pelunasan Bon QRIS)
+        $saldoQrHariIni = $totalQrisHariIni + $bonLunasQrisHariIni;
+
         $totalBonHariIni = Rekap::whereNotNull('service_id')
             ->where('metode_pembayaran_id', $idBon)
             ->whereBetween('created_at', [$start, $end])
@@ -728,6 +740,8 @@ class RekapController extends Controller
             'totalOmzetKotorHariIni',
             'totalTunaiHariIni',
             'totalQrisHariIni',
+            'bonLunasQrisHariIni',
+            'saldoQrHariIni',
             'totalTapHariIni',
             'expectedTapHariIni',
             'tapGagalHariIni',

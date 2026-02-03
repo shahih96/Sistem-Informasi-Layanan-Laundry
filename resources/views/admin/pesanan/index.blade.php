@@ -52,13 +52,13 @@
                             // Fungsi untuk aliasing nama layanan (migrasi bon)
                             function getServiceAliasMigrasi($namaService) {
                                 $aliases = [
-                                    'Cuci Self Service Max 7Kg' => 'Cuci',
+                                    'Cuci Self Service ≤ 7Kg' => 'Cuci',
                                     'Cuci Setrika Regular (/Kg)' => 'CKS R',
-                                    'Kering Self Service Max 7Kg' => 'Kering',
-                                    'Cuci Lipat Express Max 7Kg' => 'CKL E',
-                                    'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
-                                    'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
-                                    'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
+                                    'Kering Self Service ≤ 7Kg' => 'Kering',
+                                    'Cuci Lipat Express ≤ 7Kg' => 'CKL E',
+                                    'Cuci Setrika Express ≤ 3Kg' => 'CKS E 3Kg',
+                                    'Cuci Setrika Express ≤ 5Kg' => 'CKS E 5Kg',
+                                    'Cuci Setrika Express ≤ 7Kg' => 'CKS E 7Kg',
                                     'Cuci Lipat Regular (/Kg)' => 'CKL R',
                                 ];
                                 return $aliases[$namaService] ?? $namaService;
@@ -233,20 +233,16 @@
                                         // Fungsi untuk aliasing nama layanan
                                         function getServiceAliasPesanan($namaService) {
                                             $aliases = [
-                                                'Cuci Self Service Max 7Kg' => 'Cuci',
-                                                'Cuci Setrika Regular (/Kg)' => 'CKS R',
-                                                'Kering Self Service Max 7Kg' => 'Kering',
-                                                'Cuci Lipat Express Max 7Kg' => 'CKL E',
-                                                'Cuci Setrika Express 3Kg' => 'CKS E 3Kg',
-                                                'Cuci Setrika Express 5Kg' => 'CKS E 5Kg',
-                                                'Cuci Setrika Express 7Kg' => 'CKS E 7Kg',
-                                                'Cuci Lipat Regular (/Kg)' => 'CKL R',
+                                                'Cuci Lipat Express ≤ 7Kg' => 'CKL E',
+                                                'Cuci Setrika Express ≤ 3Kg' => 'CKS E 3Kg',
+                                                'Cuci Setrika Express ≤ 5Kg' => 'CKS E 5Kg',
+                                                'Cuci Setrika Express ≤ 7Kg' => 'CKS E 7Kg',
                                             ];
                                             return $aliases[$namaService] ?? $namaService;
                                         }
                                         
                                         // Layanan yang TIDAK boleh muncul
-                                        $excludedServices = ['Cuci Self Service Max 7Kg', 'Kering Self Service Max 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=3KM)', 'Antar Jemput (>3KM)'];
+                                        $excludedServices = ['Cuci Self Service ≤ 7Kg', 'Kering Self Service ≤ 7Kg', 'Antar Jemput (<=3KM)', 'Antar Jemput (>3KM)'];
                                         
                                         // Filter dan sort
                                         $filteredServicesPesanan = $services->filter(function($s) use ($excludedServices) {
