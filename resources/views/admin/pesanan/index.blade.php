@@ -65,7 +65,7 @@
                             }
                             
                             // Layanan yang TIDAK boleh muncul (sama seperti form pesanan utama)
-                            $excludedServicesMigrasi = ['Cuci Self Service Max 7Kg', 'Kering Self Service Max 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=3KM)', 'Antar Jemput (>3KM)'];
+                            $excludedServicesMigrasi = ['Cuci Self Service ≤ 7Kg', 'Kering Self Service ≤ 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)'];
                             
                             // Filter: ambil yang BUKAN termasuk excluded
                             $filteredServicesMigrasi = $services->filter(function($s) use ($excludedServicesMigrasi) {
@@ -100,7 +100,7 @@
                         style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; padding-right: 2.5rem;">
                         <option value="">Tidak</option>
                         @foreach ($services as $s)
-                            @if ($s->is_fee_service && in_array($s->nama_service, ['Antar Jemput (<=3KM)', 'Antar Jemput (>3KM)']))
+                            @if ($s->is_fee_service && in_array($s->nama_service, ['Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)']))
                                 <option value="{{ $s->id }}" @selected(old('antar_jemput_service_id') == $s->id)>
                                     {{ $s->nama_service }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
                                 </option>
@@ -199,7 +199,7 @@
                         style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; padding-right: 2.5rem;">
                         <option value="">Tidak</option>
                         @foreach ($services as $s)
-                            @if ($s->is_fee_service && in_array($s->nama_service, ['Antar Jemput (<=3KM)', 'Antar Jemput (>3KM)']))
+                            @if ($s->is_fee_service && in_array($s->nama_service, ['Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)']))
                                 <option value="{{ $s->id }}" @selected(old('antar_jemput_service_id') == $s->id)>
                                     {{ $s->nama_service }} — Rp {{ number_format($s->harga_service, 0, ',', '.') }}
                                 </option>
