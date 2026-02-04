@@ -425,6 +425,7 @@
                                             
                                             $waMessage .= "━━━━━━━━━━━━━━━━━━━\n";
                                             $waMessage .= "*TOTAL: Rp " . number_format($total, 0, ',', '.') . "*\n\n";
+                                            $waMessage .= "*Status Pembayaran: " . ($isLunas ? "✅ LUNAS" : "❌ BELUM LUNAS") . "*\n\n";
                                             $waMessage .= "Untuk memantau proses cucian kakak, silakan cek status laundry melalui website kami di:\n";
                                             $waMessage .= "👉 qxpresslaundry.com/tracking";
                                             
@@ -511,29 +512,34 @@
                                         }
                                         
                                         // Pesan notifikasi selesai
-                                        $waNotifSelesai = "Halo kak " . $p->nama_pel . "\n\n";
-                                        $waNotifSelesai .= "*CUCIAN ANDA SUDAH SELESAI!*\n\n";
-                                        $waNotifSelesai .= "Berikut rincian pesanan Anda:\n\n";
+                                        $waNotifSelesai = "Halo kak " . $p->nama_pel . ", *CUCIAN ANDA SUDAH SELESAI*\n\n";
+                                        $waNotifSelesai .= "Berikut adalah rincian pesanan laundry anda:\n\n";
                                         
                                         // Layanan utama
                                         $waNotifSelesai .= "• " . ($p->service->nama_service ?? '-') . " (" . $qty . "x)\n";
+                                        $waNotifSelesai .= "  Subtotal: Rp " . number_format($totalLayanan, 0, ',', '.') . "\n\n";
                                         
                                         // Layanan tambahan
                                         foreach ($additionalServices as $addServ) {
                                             $qtyAdd = max(1, (int) ($addServ->qty ?? 1));
+                                            $hargaAdd = (int) ($addServ->harga_satuan ?? ($addServ->service->harga_service ?? 0));
+                                            $subtotalAdd = $qtyAdd * $hargaAdd;
                                             $waNotifSelesai .= "• " . ($addServ->service->nama_service ?? '-') . " (" . $qtyAdd . "x)\n";
+                                            $waNotifSelesai .= "  Subtotal: Rp " . number_format($subtotalAdd, 0, ',', '.') . "\n\n";
                                         }
                                         
                                         // Antar jemput
                                         if ($p->antar_jemput_service_id && $p->antarJemputService) {
                                             $waNotifSelesai .= "• " . $p->antarJemputService->nama_service . "\n";
+                                            $waNotifSelesai .= "  Subtotal: Rp " . number_format($hargaAntarJemput, 0, ',', '.') . "\n\n";
                                         }
                                         
-                                        $waNotifSelesai .= "\n*Total: Rp " . number_format($total, 0, ',', '.') . "*\n\n";
+                                        $waNotifSelesai .= "━━━━━━━━━━━━━━━━━━━\n";
+                                        $waNotifSelesai .= "*TOTAL: Rp " . number_format($total, 0, ',', '.') . "*\n";
+                                        $waNotifSelesai .= "*Status Pembayaran: " . ($isLunas ? "✅ LUNAS" : "❌ BELUM LUNAS") . "*\n\n";
                                         $waNotifSelesai .= "Cucian Anda sudah bisa diambil di Qxpress Laundry. ";
-                                        $waNotifSelesai .= "Kami tunggu kedatangan kakak ya😊\n\n";
-                                        $waNotifSelesai .= "Terima kasih sudah menggunakan layanan kami. 🙏\n\n";
-                                        $waNotifSelesai .= "Cek status laundry: qxpresslaundry.com/tracking";
+                                        
+                                        $waNotifSelesai .= "Kami tunggu kedatanganya, Terima kasih sudah menggunakan layanan kami. 🙏";
                                         
                                         $waLinkNotif = "https://wa.me/" . $waNumberNotif . "?text=" . urlencode($waNotifSelesai);
                                     @endphp
