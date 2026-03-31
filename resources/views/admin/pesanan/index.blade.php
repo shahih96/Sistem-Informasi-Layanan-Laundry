@@ -522,14 +522,14 @@
                                 <div class="text-xs text-gray-500 mt-0.5">{{ $p->no_hp_pel }}</div>
                             </td>
                             <td class="px-3 py-2">
-                                <div>{{ $p->service->nama_service ?? '-' }} ({{ $qty }}x)</div>
+                                <div>{{ getServiceAliasPesanan($p->service->nama_service ?? '-') }} ({{ $qty }}x)</div>
                                 @foreach ($additionalServices as $addServ)
                                     <div class="mt-0.5">
-                                        {{ $addServ->service->nama_service ?? '-' }} ({{ $addServ->qty }}x)
+                                        {{ getServiceAliasPesanan($addServ->service->nama_service ?? '-') }} ({{ $addServ->qty }}x)
                                     </div>
                                 @endforeach
                                 @if ($p->antar_jemput_service_id && $p->antarJemputService)
-                                    <div class="text-xs text-gray-500 mt-0.5">{{ $p->antarJemputService->nama_service }}</div>
+                                    <div class="text-xs text-gray-500 mt-0.5">{{ getServiceAliasPesanan($p->antarJemputService->nama_service ?? '-') }}</div>
                                 @endif
                             </td>
 

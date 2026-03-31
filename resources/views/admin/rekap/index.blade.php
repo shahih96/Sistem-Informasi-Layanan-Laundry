@@ -522,14 +522,14 @@
                                 </td>
 
                                 <td class="px-3 py-2 font-bold">
-                                    <div>{{ $p->service->nama_service ?? '-' }} ({{ $qty }}x)</div>
+                                    <div>{{ getServiceAlias($p->service->nama_service ?? '-') }} ({{ $qty }}x)</div>
                                     @foreach ($additionalServices as $addServ)
                                         <div class="mt-0.5">
-                                            {{ $addServ->service->nama_service ?? '-' }} ({{ $addServ->qty }}x)
+                                            {{ getServiceAlias($addServ->service->nama_service ?? '-') }} ({{ $addServ->qty }}x)
                                         </div>
                                     @endforeach
                                     @if ($p->antar_jemput_service_id && $p->antarJemputService)
-                                        <div class="text-xs text-gray-500 mt-0.5 font-normal">{{ $p->antarJemputService->nama_service }}</div>
+                                        <div class="text-xs text-gray-500 mt-0.5 font-normal">{{ getServiceAlias($p->antarJemputService->nama_service ?? '-') }}</div>
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-center font-bold">Rp {{ number_format($total, 0, ',', '.') }}</td>
