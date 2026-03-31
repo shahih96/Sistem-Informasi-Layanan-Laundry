@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class PesananLaundry extends Model
 {
@@ -13,7 +14,7 @@ class PesananLaundry extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'group_id','service_id','antar_jemput_service_id','nama_pel','no_hp_pel','admin_id','qty','metode_pembayaran_id','is_hidden','harga_satuan'
+        'group_id','service_id','antar_jemput_service_id','nama_pel','no_hp_pel','admin_id','qty','metode_pembayaran_id','is_hidden','harga_satuan','cabang_id'
     ];
 
     protected $casts = [
@@ -33,9 +34,24 @@ class PesananLaundry extends Model
     public function rekaps(){ return $this->hasMany(Rekap::class,'pesanan_laundry_id'); }
     public function rekap(){ return $this->hasOne(Rekap::class,'pesanan_laundry_id'); } // kept for backward compatibility
     public function latestStatusLog(){return $this->hasOne(StatusPesanan::class, 'pesanan_id')->latestOfMany(); }
+    public function cabang(){ return $this->belongsTo(Cabang::class, 'cabang_id'); }
 
     protected static function booted()
     {
+        // Global Scope: Otomatis filter by cabang_id
+        static::addGlobalScope('cabang', function ($query) {
+            if (Auth::check() && Auth::user()->cabang_id) {
+                $query->where('pesanan_laundry.cabang_id', Auth::user()->cabang_id);
+            }
+        });
+
+        // Auto-set cabang_id saat create
+        static::creating(function ($model) {
+            if (Auth::check() && !$model->cabang_id) {
+                $model->cabang_id = Auth::user()->cabang_id;
+            }
+        });
+
         static::updating(function (self $m) {
             if ($m->isDirty('metode_pembayaran_id')) {
                 $old = $m->getOriginal('metode_pembayaran_id');

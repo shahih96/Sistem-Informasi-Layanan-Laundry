@@ -3,6 +3,20 @@
 @section('title','Dashboard Qxpress Laundry')
 
 @section('content')
+@php $cabangId = optional(auth()->user())->cabang_id; @endphp
+
+<!-- Judul besar per cabang di atas card (centered) -->
+<div class="w-full mb-6">
+  <h1 class="text-center font-extrabold text-3xl md:text-4xl lg:text-5xl">
+    @if ($cabangId == 1)
+      Qxpress Laundry Airan
+    @elseif ($cabangId == 2)
+      Qxpress Laundry Kopi
+    @else
+      Qxpress Laundry
+    @endif
+  </h1>
+</div>
 {{-- ===== CARDS: HARI INI ===== --}}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
   {{-- Card 1: Pendapatan Bersih Hari Ini (Tukar dengan Total Pesanan) --}}

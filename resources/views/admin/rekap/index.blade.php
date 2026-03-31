@@ -21,7 +21,21 @@
     </div>
 
     <div id="rekap-sheet" class="mt-2 p-2">
-        <div class="text-sm text-gray-600 ml-auto pb-2">
+        @php $cabangId = optional(auth()->user())->cabang_id; @endphp
+
+        <div class="w-full mb-3">
+            <h1 class="w-full text-center font-extrabold text-xl md:text-4xl lg:text-5xl leading-tight">
+                @if ($cabangId == 1)
+                    REKAP CABANG AIRAN
+                @elseif ($cabangId == 2)
+                    REKAP CABANG KOPI
+                @else
+                    REKAP CABANG
+                @endif
+            </h1>
+        </div>
+
+        <div class="text-sm text-center text-gray-600 ml-auto pb-2 sm:text-base">
             Menampilkan rekap tanggal:
             <strong>{{ \Carbon\Carbon::parse(request('d', optional($day ?? now())->toDateString()))->translatedFormat('l, d M Y') }}</strong>
         </div>

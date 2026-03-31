@@ -20,6 +20,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'cabang_id',
     ];
 
     /**
@@ -44,5 +45,11 @@ class User extends Authenticatable
             'is_admin' => 'boolean',    
             'password' => 'hashed',
         ];
+    }
+
+    // Relasi ke Cabang
+    public function cabang()
+    {
+        return $this->belongsTo(Cabang::class, 'cabang_id');
     }
 }
