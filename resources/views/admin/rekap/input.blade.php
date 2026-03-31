@@ -214,22 +214,42 @@
                         // Fungsi untuk aliasing nama layanan
                         function getServiceAliasInput($namaService) {
                             $aliases = [
+                                // Self service -> short alias
                                 'Cuci Self Service ≤7Kg' => 'Cuci',
-                                'Cuci Setrika Regular (/Kg)' => 'CKS R',
+                                'Cuci Self Service ≤ 7Kg' => 'Cuci',
                                 'Kering Self Service ≤7Kg' => 'Kering',
+                                'Kering Self Service ≤ 7Kg' => 'Kering',
+
+                                'Cuci Setrika Regular (/Kg)' => 'CKS R',
                                 'Cuci Lipat Express ≤7Kg' => 'CKL E',
+                                'Cuci Lipat Express ≤ 7Kg' => 'CKL E',
                                 'Cuci Setrika Express ≤3Kg' => 'CKS E 3Kg',
                                 'Cuci Setrika Express ≤5Kg' => 'CKS E 5Kg',
                                 'Cuci Setrika Express ≤7Kg' => 'CKS E 7Kg',
                                 'Cuci Lipat Regular (/Kg)' => 'CKL R',
+
+                                // Plastik alias
+                                'Plastik Asoy' => 'Plastik',
                             ];
                             return $aliases[$namaService] ?? $namaService;
                         }
-                        
-                        // Filter hanya layanan tertentu untuk tabel omset
-                        $allowedServices = ['Cuci Self Service ≤7Kg', 'Kering Self Service ≤7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (>5KM)'];
-                        $filteredServices = $services->filter(function($s) use ($allowedServices) {
-                            return in_array($s->nama_service, $allowedServices);
+
+                        // Normalisasi nama service untuk perbandingan
+                        function normalizeServiceName($s) {
+                            $s = trim($s);
+                            // normalisasi variasi tanda ≤ dan <= serta spasi di sekitarnya
+                            $s = str_replace(['<=', '≤ ' , ' ≤'], '<=', $s);
+                            // collapse multiple spaces
+                            $s = preg_replace('/\s+/', ' ', $s);
+                            return strtolower($s);
+                        }
+
+                        // Filter hanya layanan tertentu untuk tabel omset (gunakan normalisasi)
+                        $allowedServices = ['Cuci Self Service ≤7Kg', 'Cuci Self Service ≤ 7Kg', 'Kering Self Service ≤7Kg', 'Kering Self Service ≤ 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (<=5KM)', 'Antar Jemput (<= 5KM)', 'Antar Jemput (>5KM)'];
+                        $allowedNormalized = array_map(fn($a) => normalizeServiceName($a), $allowedServices);
+
+                        $filteredServices = $services->filter(function($s) use ($allowedNormalized) {
+                            return in_array(normalizeServiceName($s->nama_service), $allowedNormalized);
                         });
                         
                         // Urutkan services berdasarkan abjad

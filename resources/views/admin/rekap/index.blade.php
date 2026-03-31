@@ -240,17 +240,32 @@
                     [&_tr:hover]:bg-amber-50/40
                   ">
                         @php
-                            // Fungsi untuk aliasing nama layanan
+                            // Fungsi normalisasi nama layanan (toleran terhadap variasi spasi dan simbol ≤/<=)
+                            function normalizeServiceName($s) {
+                                $s = trim((string) $s);
+                                // normalisasi variasi tanda ≤ dan <= serta spasi di sekitarnya
+                                $s = str_replace(['<=', '≤ ', ' ≤'], '<=', $s);
+                                // collapse multiple spaces
+                                $s = preg_replace('/\s+/', ' ', $s);
+                                return strtolower($s);
+                            }
+
+                            // Fungsi untuk aliasing nama layanan (menggunakan normalisasi)
                             function getServiceAlias($namaService) {
                                 $aliases = [
-                                    'Cuci Self Service ≤7Kg' => 'Cuci',
-                                    'Kering Self Service ≤7Kg' => 'Kering',
-                                    'Cuci Lipat Express ≤7Kg' => 'CKL E',
-                                    'Cuci Setrika Express ≤3Kg' => 'CKS E 3Kg',
-                                    'Cuci Setrika Express ≤5Kg' => 'CKS E 5Kg',
-                                    'Cuci Setrika Express ≤7Kg' => 'CKS E 7Kg',
+                                    normalizeServiceName('Cuci Self Service ≤7Kg') => 'Cuci',
+                                    normalizeServiceName('Cuci Self Service ≤ 7Kg') => 'Cuci',
+                                    normalizeServiceName('Kering Self Service ≤7Kg') => 'Kering',
+                                    normalizeServiceName('Kering Self Service ≤ 7Kg') => 'Kering',
+                                    normalizeServiceName('Cuci Lipat Express ≤7Kg') => 'CKL E',
+                                    normalizeServiceName('Cuci Lipat Express ≤ 7Kg') => 'CKL E',
+                                    normalizeServiceName('Cuci Setrika Express ≤3Kg') => 'CKS E 3Kg',
+                                    normalizeServiceName('Cuci Setrika Express ≤5Kg') => 'CKS E 5Kg',
+                                    normalizeServiceName('Cuci Setrika Express ≤7Kg') => 'CKS E 7Kg',
                                 ];
-                                return $aliases[$namaService] ?? $namaService;
+
+                                $key = normalizeServiceName($namaService);
+                                return $aliases[$key] ?? $namaService;
                             }
                             
                             // Urutkan berdasarkan nama layanan (abjad), lalu metode

@@ -64,14 +64,39 @@
                                 return $aliases[$namaService] ?? $namaService;
                             }
                             
-                            // Layanan yang TIDAK boleh muncul (sama seperti form pesanan utama)
+                            // Ambil id cabang dari user saat ini
+                            $cabangId = optional(auth()->user())->cabang_id;
+
+                            // Layanan yang TIDAK boleh muncul (default)
                             $excludedServicesMigrasi = ['Cuci Self Service ≤ 7Kg', 'Kering Self Service ≤ 7Kg', 'Deterjen', 'Pewangi', 'Proclin', 'Plastik Asoy', 'Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)'];
-                            
-                            // Filter: ambil yang BUKAN termasuk excluded
-                            $filteredServicesMigrasi = $services->filter(function($s) use ($excludedServicesMigrasi) {
-                                return !in_array($s->nama_service, $excludedServicesMigrasi);
-                            });
-                            
+
+                            // Jika cabang Kopi (id=2) — batasi ke daftar layanan khusus
+                            if ($cabangId == 2) {
+                                // Untuk Kopi: gunakan whitelist nama layanan yang diizinkan.
+                                // Sertakan varian spasi untuk simbol ≤ karena ada inkonsistensi penulisan.
+                                $allowedKopi = [
+                                    'Bed Cover',
+                                    'Cuci Lipat Express ≤7Kg',
+                                    'Cuci Lipat Express ≤ 7Kg',
+                                    'Cuci Self Service ≤7Kg',
+                                    'Cuci Self Service ≤ 7Kg',
+                                    'Kering Self Service ≤7Kg',
+                                    'Kering Self Service ≤ 7Kg',
+                                    'Deterjen',
+                                    'Pewangi',
+                                    'Plastik Asoy',
+                                ];
+
+                                $filteredServicesMigrasi = $services->filter(function($s) use ($allowedKopi) {
+                                    return in_array($s->nama_service, $allowedKopi);
+                                });
+                            } else {
+                                // Filter: ambil yang BUKAN termasuk excluded
+                                $filteredServicesMigrasi = $services->filter(function($s) use ($excludedServicesMigrasi) {
+                                    return !in_array($s->nama_service, $excludedServicesMigrasi);
+                                });
+                            }
+
                             // Urutkan services berdasarkan abjad (migrasi bon)
                             $sortedServicesMigrasi = $filteredServicesMigrasi->sortBy('nama_service');
                         @endphp
@@ -233,22 +258,58 @@
                                         // Fungsi untuk aliasing nama layanan
                                         function getServiceAliasPesanan($namaService) {
                                             $aliases = [
+                                                // Cuci / Kering self service -> tampilkan alias singkat
+                                                'Cuci Self Service ≤7Kg' => 'Cuci',
+                                                'Cuci Self Service ≤ 7Kg' => 'Cuci',
+                                                'Kering Self Service ≤7Kg' => 'Kering',
+                                                'Kering Self Service ≤ 7Kg' => 'Kering',
+
+                                                // Lipat express alias
                                                 'Cuci Lipat Express ≤7Kg' => 'CKL E',
+                                                'Cuci Lipat Express ≤ 7Kg' => 'CKL E',
+
+                                                // Setrika express (tetap tampil utuh atau dengan alias jika perlu)
                                                 'Cuci Setrika Express ≤3Kg' => 'CKS E 3Kg',
                                                 'Cuci Setrika Express ≤5Kg' => 'CKS E 5Kg',
                                                 'Cuci Setrika Express ≤7Kg' => 'CKS E 7Kg',
+
+                                                // Plastik alias
+                                                'Plastik Asoy' => 'Plastik',
                                             ];
                                             return $aliases[$namaService] ?? $namaService;
                                         }
                                         
-                                        // Layanan yang TIDAK boleh muncul
+                                        // Ambil id cabang dari user saat ini
+                                        $cabangId = optional(auth()->user())->cabang_id;
+
+                                        // Layanan yang TIDAK boleh muncul (default)
                                         $excludedServices = ['Cuci Self Service ≤7Kg', 'Kering Self Service ≤7Kg', 'Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)'];
-                                        
-                                        // Filter dan sort
-                                        $filteredServicesPesanan = $services->filter(function($s) use ($excludedServices) {
-                                            return !in_array($s->nama_service, $excludedServices);
-                                        });
-                                        
+
+                                        // Jika cabang Kopi (id=2) — batasi ke daftar layanan khusus
+                                        if ($cabangId == 2) {
+                                            $allowedKopi = [
+                                                'Bed Cover',
+                                                'Cuci Lipat Express ≤7Kg',
+                                                'Cuci Lipat Express ≤ 7Kg',
+                                                'Cuci Self Service ≤7Kg',
+                                                'Cuci Self Service ≤ 7Kg',
+                                                'Kering Self Service ≤7Kg',
+                                                'Kering Self Service ≤ 7Kg',
+                                                'Deterjen',
+                                                'Pewangi',
+                                                'Plastik Asoy',
+                                            ];
+
+                                            $filteredServicesPesanan = $services->filter(function($s) use ($allowedKopi) {
+                                                return in_array($s->nama_service, $allowedKopi);
+                                            });
+                                        } else {
+                                            // Filter dan sort default
+                                            $filteredServicesPesanan = $services->filter(function($s) use ($excludedServices) {
+                                                return !in_array($s->nama_service, $excludedServices);
+                                            });
+                                        }
+
                                         $sortedServicesPesanan = $filteredServicesPesanan->sortBy('nama_service');
                                     @endphp
                                     @foreach ($sortedServicesPesanan as $s)
