@@ -250,7 +250,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round"
                                                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                         </svg>
-                                        <span><strong>0813-7382-0217</strong></span>
+                                        <span><strong>0823-1257-9946</strong></span>
                                     </div>
                                     <div class="flex items-start gap-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#084cac] flex-shrink-0 mt-0.5"
@@ -267,7 +267,7 @@
 
                                 <!-- CTA Buttons -->
                                 <div class="mt-6 flex flex-wrap gap-3">
-                                    <a href="https://wa.me/6281373820217?text=Halo%20Qxpress%20Laundry%2C%20mau%20jemput%20cucian%20ya"
+                                    <a href="https://wa.me/6282312579946?text=Halo%20Qxpress%20Laundry%2C%20mau%20jemput%20cucian%20ya"
                                         class="inline-flex items-center justify-center px-5 py-3 rounded-xl text-white bg-[#084cac] shadow hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#084cac]/60">
                                         Pesan Antar-Jemput
                                     </a>

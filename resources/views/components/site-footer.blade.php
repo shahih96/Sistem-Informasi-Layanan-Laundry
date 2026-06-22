@@ -4,7 +4,7 @@
       <p class="text-sm">Contact Us!</p>
       <div class="flex items-center gap-6 text-sm opacity-95">
         <span>@qxpress.laundry</span>
-        <span>0813-7382-0217</span>
+        <span>0823-1257-9946</span>
       </div>
       <p class="text-xs opacity-80 mt-2">&copy; {{ date('Y') }} Qxpress Laundry</p>
     </div>

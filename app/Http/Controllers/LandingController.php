@@ -14,7 +14,7 @@ class LandingController extends Controller
     {
         $services = InformasiLaundry::latest()->take(6)->get();
         $wamsg = "Halo Qxpress Laundry! Saya mau pesan layanan Laundry";
-        $waUrl = 'https://wa.me/6281373820217?text=' . rawurlencode($wamsg);
+        $waUrl = 'https://wa.me/6282312579946?text=' . rawurlencode($wamsg);
     
         return view('welcome', compact('services', 'waUrl'));
     }
@@ -81,7 +81,7 @@ class LandingController extends Controller
             ->mapWithKeys(fn($k) => [$k => $grouped->get($k, collect())])
             ->filter(fn($rows) => $rows->isNotEmpty());
         $wamsg = "Halo Qxpress Laundry! Saya mau pesan layanan Laundry";
-        $waUrl = 'https://wa.me/6281373820217?text=' . rawurlencode($wamsg);
+        $waUrl = 'https://wa.me/6282312579946?text=' . rawurlencode($wamsg);
 
         return view('daftarharga', compact('grouped', 'waUrl'));
     }
@@ -121,7 +121,7 @@ class LandingController extends Controller
         }
     
         $wamsg = "Halo Qxpress Laundry! Saya mau pesan layanan Laundry";
-        $waUrl = 'https://wa.me/6281373820217?text=' . rawurlencode($wamsg);
+        $waUrl = 'https://wa.me/6282312579946?text=' . rawurlencode($wamsg);
     
         return view('tracking', compact('q', 'items', 'error', 'waUrl'));
     }
