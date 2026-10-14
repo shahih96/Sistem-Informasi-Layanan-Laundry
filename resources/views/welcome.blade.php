@@ -119,7 +119,7 @@
                     </div>
                     <h3 class="mt-4 font-semibold text-lg">Cuci Lipat</h3>
                     <p class="text-sm text-gray-600 mt-1">Dicuci bersih dan dilipat rapi.</p>
-                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp4.000/Kg</p>
+                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp30.000/7Kg</p>
                 </div>
 
                 <!-- Cuci Setrika -->
@@ -130,7 +130,7 @@
                     </div>
                     <h3 class="mt-4 font-semibold text-lg">Cuci Setrika</h3>
                     <p class="text-sm text-gray-600 mt-1">Bersih, wangi, dan bebas kusut.</p>
-                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp6.000/Kg</p>
+                    <p class="text-[#084cac] font-semibold mt-2">Mulai dari Rp30.000/3Kg</p>
                 </div>
 
                 <!-- Antar Jemput -->
