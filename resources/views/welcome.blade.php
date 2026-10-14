@@ -198,7 +198,7 @@
                                 </p>
 
                                 <!-- Keunggulan -->
-                                <div id="tentang" class="mt-6">
+                                <div class="mt-6">
                                     <h4 class="font-semibold text-gray-900 mb-4">Keunggulan</h4>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div class="flex items-center gap-3 p-1.5">
@@ -239,7 +239,7 @@
                                 </div>
                             </div>
                         </div>
-
+                    <section id="tentang">
                         <!-- Dua Cabang -->
                         <div class="mt-10 grid md:grid-cols-2 gap-8">
                             <!-- Cabang Airan -->
@@ -354,6 +354,7 @@
                         </div>
                             </div>
                         </div>
+                    </section>    
                     </div>
                 </div>
             </div>
