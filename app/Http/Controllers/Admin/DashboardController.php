@@ -141,17 +141,21 @@ class DashboardController extends Controller
 
         // BON dilunasi TUNAI (harga terkunci) – exclude AJ
         $extraCashFromBonLunasTunaiCum = PesananLaundry::query()
-            ->leftJoin('rekap', 'rekap.pesanan_laundry_id', '=', 'pesanan_laundry.id')
             ->join('services', 'services.id', '=', 'pesanan_laundry.service_id')
             ->where('services.is_fee_service', 0)
             ->where('pesanan_laundry.metode_pembayaran_id', $idTunai)
-            ->where('pesanan_laundry.created_at', '<=', $end)     // <-- disamakan dg RekapController
+            ->where('pesanan_laundry.created_at', '<=', $end)
             ->whereNotNull('pesanan_laundry.paid_at')
             ->where('pesanan_laundry.paid_at', '<=', $end)
-            ->where(function ($q) use ($idTunai) {
-                $q->whereNull('rekap.id')->orWhere('rekap.metode_pembayaran_id', '<>', $idTunai);
+            ->whereNotExists(function ($q) use ($idTunai) {
+                $q->select(DB::raw(1))
+                    ->from('rekap')
+                    ->whereColumn('rekap.pesanan_laundry_id', 'pesanan_laundry.id')
+                    ->where('rekap.metode_pembayaran_id', $idTunai);
             })
-            ->sum(DB::raw('GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'));
+            ->sum(DB::raw(
+                'GREATEST(1, IFNULL(pesanan_laundry.qty,1)) * COALESCE(pesanan_laundry.harga_satuan, services.harga_service)'
+            ));
 
         // ====== FEE KUMULATIF (untuk totalCash) – sama dengan RekapController ======
         $rowsToEnd = Rekap::with('service')
