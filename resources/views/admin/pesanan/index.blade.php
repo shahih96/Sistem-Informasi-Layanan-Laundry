@@ -283,7 +283,7 @@
                                         $cabangId = optional(auth()->user())->cabang_id;
 
                                         // Layanan yang TIDAK boleh muncul (default)
-                                        $excludedServices = ['Cuci Self Service ≤7Kg', 'Kering Self Service ≤7Kg', 'Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)'];
+                                        $excludedServices = ['Antar Jemput (≤3KM)', 'Antar Jemput (>3KM)'];
 
                                         // Jika cabang Kopi (id=2) — batasi ke daftar layanan khusus
                                         if ($cabangId == 2) {
