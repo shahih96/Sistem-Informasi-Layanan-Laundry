@@ -197,7 +197,7 @@
                            autocomplete="off" 
                            class="mt-1 w-full border rounded px-3 py-2 @error('no_hp_pel') border-red-500 @enderror" 
                            required>
-                    <p class="text-xs text-gray-500 mt-1">Masukkan 10-14 digit angka</p>
+                    <p class="text-xs text-gray-500 mt-1">Masukkan 10-14 digit angka.</p>
                     @error('no_hp_pel')
                         <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
                     @enderror
