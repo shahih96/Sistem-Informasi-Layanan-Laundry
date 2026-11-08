@@ -488,7 +488,7 @@
                                             $waMessage .= "*TOTAL: Rp " . number_format($total, 0, ',', '.') . "*\n\n";
                                             $waMessage .= "*Status Pembayaran: " . ($isLunas ? "✅ LUNAS" : "❌ BELUM LUNAS") . "*\n\n";
                                             $waMessage .= "Untuk memantau proses cucian kakak, silakan cek status laundry melalui website kami di:\n";
-                                            $waMessage .= "👉 qxpresslaundry.com/tracking";
+                                            $waMessage .= "👉 qxpress.my.id/tracking";
                                             
                                             $waLink = "https://wa.me/" . $waNumber . "?text=" . urlencode($waMessage);
                                         @endphp
